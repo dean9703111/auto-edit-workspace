@@ -65,6 +65,8 @@
   <style>
     #x-recap { position: absolute; inset: 0; }
     #x-recap .fill { position: absolute; inset: 0; }
+    /* 整組已經排在 y 40–900，不照 kit/scene.css 再下移 42（078）：下移會讓最下面的序號進字幕區 */
+    #x-recap > :not(.sc-surface-fs):not(.fill) { margin-top: 0; }
     #x-recap #xrcp-wall { position: absolute; inset: 0; }
     /* 標題：置中在內容區（子母畫面 x 120–1300、全寬 x 120–1800）；top 由程式照張數給 */
     #x-recap #xrcp-title { position: absolute; left: 120px; top: 250px; width: 1180px; height: 100px; text-align: center; white-space: nowrap; color: var(--sc-fs-ink); }

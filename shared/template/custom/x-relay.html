@@ -64,6 +64,8 @@
   <style>
     #x-relay { position: absolute; inset: 0; }
     #x-relay .fill { position: absolute; inset: 0; }
+    /* 膠片視窗已經用到 y 60–900，不照 kit/scene.css 再下移 42（078）：下移會讓視窗下緣進字幕區 */
+    #x-relay > :not(.sc-surface-fs):not(.fill) { margin-top: 0; }
     /* 膠片視窗：x 72–736、y 60–900（截圖卡 x 120–688，左右多留 48 給落影與亮框）；上下露出的卡在視窗邊被切掉 */
     #x-relay #xrl-card { position: absolute; left: 72px; top: 60px; width: 664px; height: 840px; overflow: hidden; }
     /* 膠片：卡由上往下排、間距 40（一格 370）；第 1 張（#xrl-c1）的上緣在視窗裡 255＝畫面 315，中線 480 */

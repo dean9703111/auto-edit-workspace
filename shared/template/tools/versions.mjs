@@ -1149,7 +1149,8 @@ export function doneSegs(P, flags = {}, ids = [], log = console.log, steps = {})
   if (marked.length) log(`✓ ${marked.join('、')} 改好了：預覽已更新，剪輯台標「已改完」`);
   if (stale.length) log(warn(`剪輯台修改單在這輪開始之後重新複製過，${stale.join('、')} 的狀態沒有改`, '照舊做完其他段，finish 時一起看'));
   const left = round.requests.ids.filter((id) => allIds.includes(id) && requestsInfo(project)?.states?.[id]?.state === 'generating');
-  log(left.length ? `還在改：${left.join('、')}（回來一段就再跑一次 done）` : `修改單的段都回報了 → 下一步：${finishCmd(P)}`);
+  if (left.length) log(`還在改：${left.join('、')}（回來一段就再跑一次 done）`);
+  else for (const l of next('修改單的段都回報了', finishCmd(P))) log(l);
   return { ok: true, marked, stale, left };
 }
 

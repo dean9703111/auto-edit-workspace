@@ -15,6 +15,21 @@ const BT = await imp('lib/audit-beats.mjs');
 
 const EX = path.join(WORKSPACE, 'projects', 'example');
 const T29 = path.join(WORKSPACE, 'projects', 't029b');
+// projects/example 的 work/ 不進版控：新抄下來的工作區、CI、worktree 沒有，用到它的測試略過。
+// 段號與綁詞照 2026-11-18 換的範例（12 段：x0102 x-breakout、x0105 x-route、x0108 x-scene、x0109 x-fix、x0110 x-process、x0111 x-timeline）；
+// 範例重剪過就照新的 work/hyperframes/plan.json、work/rough.srt 改這個檔裡的段號與綁詞。
+// work/ 是用別支影片剪的也略過（2026-11-18 換了示範口播與講稿，本機的 work/ 還是舊影片剪的：字幕和講稿對不上，重新斷句那一項一定錯）：
+// 用現在的素材把範例重剪一次，再照新的 plan.json 校準這個檔。
+function exampleSkip() {
+  if (!fs.existsSync(path.join(EX, 'work', 'hyperframes', 'plan.json'))) return 'projects/example 還沒有 work/（work/ 不進版控）';
+  try {
+    const clip = JSON.parse(fs.readFileSync(path.join(EX, 'work', 'main.json'), 'utf8')).clips[0];
+    const now = Number(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', path.join(EX, clip.file)], { encoding: 'utf8' }).stdout);
+    if (now > 0 && Math.abs(now - clip.end) > 0.5) return `projects/example 的 work/ 是用別支影片剪的（當時 ${clip.end.toFixed(1)} 秒，現在的 ${clip.file} 是 ${now.toFixed(1)} 秒）→ 用現在的素材重剪範例，再校準這個檔`;
+  } catch { /* 讀不到就照有 work/ 跑 */ }
+  return false;
+}
+const NO_EX = exampleSkip();
 const SKIP_COPY = ['assets', 'output', 'work/main.mp4', 'work/storyboard-preview', 'work/design', 'work/audit-shots', 'work/versions', 'work/feedback'];
 // 複本放在 <暫存>/projects/<名稱>（專案標籤才是 projects/<名稱>）；原始素材、輸出、截圖不抄
 // 收尾：--review、finish 會在背景開剪輯台（寫進專案資料夾），先關掉再刪
@@ -68,14 +83,20 @@ test('步驟 1：owner 判斷——模板沒手改＝plan、改一個字＝scrip
   for (const s of [{ id: 's1', scene: 'key-point' }, { id: 'f1', type: 'fx', fx: '01' }, { id: 'm1', type: 'media', src: 'assets/a.mp4' }]) assert.equal(S.beatOwnerOf(P, s).owner, 'none', s.id);
 });
 
-test('步驟 1：遷移——example 複本 --migrate-beats --dry-run 印 x0105 那一行、不寫檔', (t) => {
+test('步驟 1：遷移——example 複本 --migrate-beats --dry-run 印 x0105 那一行、不寫檔', { skip: NO_EX }, (t) => {
   const { dir, P } = copyProject(t, EX);
+  // 做成還沒遷移的舊專案：分鏡表的動畫分鏡有一拍和 plan.json 不同、沒有遷移標記
+  const sbFile = path.join(dir, 'work', 'storyboard.md'), md = read(sbFile), at = md.indexOf('#### 動畫分鏡 x0105');
+  assert.ok(md.slice(at).includes('`#23@收工`'));
+  fs.writeFileSync(sbFile, md.slice(0, at) + md.slice(at).replace('`#23@收工`', '`#23@發現`'));
+  fs.rmSync(S.beatsMarkOf(P), { force: true });
+  const sb = read(sbFile);
   const r = run('build.mjs', ['--project', dir, '--migrate-beats', '--dry-run']);
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /x0105：分鏡表的拍（#12@開拍、#13@手機）和 plan\.json（#12@拍、#13@旁邊）不同，之後以 plan\.json 為準，分鏡表下次產生時更新/);
+  assert.match(r.stdout, /x0105：分鏡表的拍（#23@發現）和 plan\.json（#23@收工）不同，之後以 plan\.json 為準，分鏡表下次產生時更新/);
   assert.ok(!fs.existsSync(path.join(dir, 'work', 'designs')), '不寫檔');
   assert.ok(!fs.existsSync(S.beatsMarkOf(P)), '--dry-run 不記標記');
-  assert.equal(read(path.join(dir, 'work', 'storyboard.md')), read(path.join(EX, 'work', 'storyboard.md')), 'storyboard.md 不動');
+  assert.equal(read(sbFile), sb, 'storyboard.md 不動');
 });
 
 test('步驟 1：遷移——t029b 複本的 s0108（手改、沒有鏡位腳本）→ 建 work/designs/s0108.md，表＝storyboard.md 那張；再跑一次不動', { skip: !fs.existsSync(T29) && 'projects/t029b 不在（作者刪掉了）' }, async (t) => {
@@ -108,51 +129,53 @@ const auditOf = (dir, only) => {
 const beatErrors = (j, id) => (j.findings || []).filter((f) => f.id === id && /^beats-/.test(f.rule) && f.level === 'error');
 const later = (f) => { const t = new Date(Date.now() + 60_000); fs.utimesSync(f, t, t); };
 
-test('步驟 2 S1：模板段改 slots 的綁詞 → build → audit 照 slots 對拍（不看過期的分鏡表）；storyboard.md 沒被碰', (t) => {
+test('步驟 2 S1：模板段改 slots 的綁詞 → build → audit 照 slots 對拍（不看過期的分鏡表）；storyboard.md 沒被碰', { skip: NO_EX }, (t) => {
   const { dir, P } = copyProject(t, EX);
   const sbFile = path.join(dir, 'work', 'storyboard.md'), sb = read(sbFile);
   const plan = planOf(P);
-  segOf(plan, 'x0107').slots.flow = '#21@下載';
+  assert.equal(segOf(plan, 'x0102').slots.hitAt, '#7@分享');
+  segOf(plan, 'x0102').slots.hitAt = '#7@一個';
   writePlan(P, plan);
   const b = run('build.mjs', ['--project', dir]);
   assert.equal(b.status, 0, b.stdout.slice(-800) + b.stderr.slice(-800));
-  const j = auditOf(dir, 'x0107');
-  assert.deepEqual((j.findings || []).filter((f) => f.id === 'x0107' && /^beats-(missing|extra)$/.test(f.rule)).map((f) => f.msg), []);
+  const j = auditOf(dir, 'x0102');
+  assert.deepEqual((j.findings || []).filter((f) => f.id === 'x0102' && /^beats-(missing|extra)$/.test(f.rule)).map((f) => f.msg), []);
   assert.equal(read(sbFile), sb, 'storyboard.md 沒被碰');
 });
 
-test('步驟 2 S2＋--review 快取：手改模板段的動畫檔多一拍 → audit 印 seed 那一行、建 work/designs/<段>.md、1 個 beats-extra 指到那個檔；表加一列 → 0 個；只改 storyboard.md 的表不重量、改 designs 重量那段', (t) => {
+test('步驟 2 S2＋--review 快取：手改模板段的動畫檔多一拍 → audit 印 seed 那一行、建 work/designs/<段>.md、1 個 beats-extra 指到那個檔；表加一列 → 0 個；只改 storyboard.md 的表不重量、改 designs 重量那段', { skip: NO_EX }, (t) => {
   const { dir, P } = copyProject(t, EX);
-  const comp = path.join(P.out, 'compositions', 'x-scene-x0110.html');
+  const comp = path.join(P.out, 'compositions', 'x-scene-x0108.html');
   const html = read(comp);
-  assert.ok(html.includes("const T3 = P.at('#49@順手');"));
-  fs.writeFileSync(comp, html.replace("const T3 = P.at('#49@順手');", "const T3 = P.at('#49@順手');\n    const T9 = P.at('#45@體力');"));
-  const f = path.join(dir, 'work', 'designs', 'x0110.md');
-  const j1 = auditOf(dir, 'x0110');
-  assert.ok((j1.notes || []).includes('x0110 的動畫檔手改過：拍點改 work/designs/x0110.md（工具剛照分鏡表建好）'), JSON.stringify(j1.notes));
+  assert.ok(html.includes("const T3 = P.at('#44@段落');"));
+  fs.writeFileSync(comp, html.replace("const T3 = P.at('#44@段落');", "const T3 = P.at('#44@段落');\n    const T9 = P.at('#43@確認');"));
+  const f = path.join(dir, 'work', 'designs', 'x0108.md');
+  const j1 = auditOf(dir, 'x0108');
+  assert.ok((j1.notes || []).includes('x0108 的動畫檔手改過：拍點改 work/designs/x0108.md（工具剛照分鏡表建好）'), JSON.stringify(j1.notes));
   assert.ok(fs.existsSync(f), 'designs 建好了');
-  const e1 = beatErrors(j1, 'x0110');
+  const e1 = beatErrors(j1, 'x0108');
   assert.deepEqual(e1.map((x) => x.rule), ['beats-extra'], JSON.stringify(e1));
-  assert.match(e1[0].fix, /work\/designs\/x0110\.md/);
-  const md = read(f), at = md.split('\n').findIndex((l) => l.includes('`#47@手機`'));
+  assert.match(e1[0].fix, /work\/designs\/x0108\.md/);
+  const md = read(f), at = md.split('\n').findIndex((l) => l.includes('`#44@段落`'));
   assert.ok(at > 0);
   const lines = md.split('\n');
-  lines.splice(at, 0, '| 1b | `#45@體力` | 體力條往下掉 | 彈出（體力條） | 體力條 | — | — | panelTop |');
+  lines.splice(at, 0, '| 2b | `#43@確認` | 體力條往下掉 | 彈出（體力條） | 體力條 | — | — | panelTop |');
   fs.writeFileSync(f, lines.join('\n'));
-  const j2 = auditOf(dir, 'x0110');
-  assert.deepEqual(beatErrors(j2, 'x0110').map((x) => x.msg), []);
+  const j2 = auditOf(dir, 'x0108');
+  assert.deepEqual(beatErrors(j2, 'x0108').map((x) => x.msg), []);
 
   // --review 的雜湊：storyboard.md 是副本，只改它的動畫分鏡不重量；改正本（designs）重量那一段
   const h1 = FL.reviewNow(P);
   assert.ok(h1, 'reviewNow 算得出來');
   const sbFile = path.join(dir, 'work', 'storyboard.md');
-  fs.writeFileSync(sbFile, read(sbFile).replace('兩支手機（標籤「兩支手機」）', '三支手機（標籤「三支手機」）'));
+  assert.ok(read(sbFile).includes('走來走去（標籤「走來走去」）'));
+  fs.writeFileSync(sbFile, read(sbFile).replace('走來走去（標籤「走來走去」）', '跑來跑去（標籤「跑來跑去」）'));
   later(sbFile);
   assert.deepEqual(FL.reviewNow(P).segs, h1.segs, '只改 storyboard.md：每段雜湊都沒變');
   fs.writeFileSync(f, read(f).replace('體力條往下掉', '體力條掉到底'));
   const h3 = FL.reviewNow(P);
   const diff = Object.keys(h1.segs).filter((id) => h1.segs[id] !== h3.segs[id]);
-  assert.deepEqual(diff, ['x0110'], '改 designs：只重量那一段');
+  assert.deepEqual(diff, ['x0108'], '改 designs：只重量那一段');
 });
 
 test('步驟 2 S4：內容設計段 designs 比 storyboard.md 舊、兩張表不同 → audit 照 designs', { skip: !fs.existsSync(T29) && 'projects/t029b 不在（作者刪掉了）' }, (t) => {
@@ -175,13 +198,17 @@ test('步驟 2 S4：內容設計段 designs 比 storyboard.md 舊、兩張表不
   assert.deepEqual(beatErrors(auditOf(dir, 's0105'), 's0105').map((x) => x.msg), []);
 });
 
-test('步驟 2 autofix：storyboard.md 在、模板段兩拍隔太近 → build.mjs --autofix 併拍成功', (t) => {
+test('步驟 2 autofix：storyboard.md 在、模板段兩拍隔太近 → build.mjs --autofix 併拍成功', { skip: NO_EX }, (t) => {
   const { dir, P } = copyProject(t, EX);
   assert.ok(fs.existsSync(path.join(dir, 'work', 'storyboard.md')));
-  const r = run('build.mjs', ['--project', dir, '--autofix', '--only', 'x0111']);
+  // 解法那一拍綁回「順手」：離痛點 2 的「多機錄影」不到 2 秒（這個範例當初分章草稿的寫法）
+  const plan = planOf(P);
+  segOf(plan, 'x0109').slots.fixAt = '#49@順手';
+  writePlan(P, plan);
+  const r = run('build.mjs', ['--project', dir, '--autofix', '--only', 'x0109']);
   assert.equal(r.status, 0, r.stdout.slice(-800) + r.stderr.slice(-800));
-  assert.match(r.stdout, /x0111：第 \d+ 拍併進第 \d+ 拍/);
-  const ats = segOf(planOf(P), 'x0111').slots.items.map((x) => x.at);
+  assert.match(r.stdout, /x0109：第 \S+ 拍併進第 \d+ 拍/);
+  const sl = segOf(planOf(P), 'x0109').slots, ats = [...sl.pains.map((x) => x.at), sl.fixAt];
   assert.ok(new Set(ats).size < ats.length, `兩拍綁同一個詞：${ats.join('、')}`);
 });
 
@@ -198,54 +225,55 @@ const editCell = (dir, id, beat, from, to) => {
   fs.writeFileSync(f, SM.applyStoryboardEdit(md, { op: 'cell', line: row.line - 1, col: 2, text: row.what.replace(from, to) }));
 };
 
-test('步驟 3-1：內容設計段在網頁改動畫分鏡第 2 拍「」裡的字 → --apply-storyboard 寫回 work/designs/<段>.md；分鏡表和正本一致、不算 dirty', (t) => {
+test('步驟 3-1：內容設計段在網頁改動畫分鏡第 2 拍「」裡的字 → --apply-storyboard 寫回 work/designs/<段>.md；分鏡表和正本一致、不算 dirty', { skip: NO_EX }, (t) => {
   const { dir, P } = copyProject(t, EX);
-  const td = run('build.mjs', ['--project', dir, '--to-design', 'x0113'], { cwd: rootOf(dir) });
+  const td = run('build.mjs', ['--project', dir, '--to-design', 'x0111'], { cwd: rootOf(dir) });
   assert.equal(td.status, 0, td.stdout.slice(-800) + td.stderr.slice(-800));
-  assert.match(read(sbOf(dir)), /- 拍點正本：work\/designs\/x0113\.md/, '--to-design 之後分鏡表那段指到正本');
-  const f = path.join(dir, 'work', 'designs', 'x0113.md');
-  fs.writeFileSync(f, ['概念：三格依序亮起', '', '#### 動畫分鏡 x0113', '', BEAT_HEAD,
+  assert.match(read(sbOf(dir)), /- 拍點正本：work\/designs\/x0111\.md/, '--to-design 之後分鏡表那段指到正本');
+  const f = path.join(dir, 'work', 'designs', 'x0111.md');
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, ['概念：三格依序亮起', '', '#### 動畫分鏡 x0111', '', BEAT_HEAD,
     '| 0 | 段起點 | 標題「本集三個部分」 | 開場 | 標題 | — |', '| 1 | `#64@下載` | 第一格「實作」 | 彈出（第一格） | 第一格 | — |',
     '| 2 | `#66@安裝` | 第二格「安裝」 | 彈出（第二格） | 第二格 | — |', '| 3 | `#68@AI` | 第三格「AI」 | 彈出（第三格） | 第三格 | — |', ''].join('\n'));
-  const r0 = S.refreshStoryboard(P, planOf(P), { only: ['x0113'] });   // 設計師寫好之後的分鏡表（--storyboard --only 也是這樣產生）
-  assert.deepEqual(r0.changed, ['x0113']);
-  editCell(dir, 'x0113', 2, '安裝', '設定');
+  const r0 = S.refreshStoryboard(P, planOf(P), { only: ['x0111'] });   // 設計師寫好之後的分鏡表（--storyboard --only 也是這樣產生）
+  assert.deepEqual(r0.changed, ['x0111']);
+  editCell(dir, 'x0111', 2, '安裝', '設定');
   assert.ok(ST.storyboardDirty(P));
   const r = run('build.mjs', ['--project', dir, '--apply-storyboard', '--said', '可以'], { cwd: rootOf(dir) });
   assert.equal(r.status, 0, r.stdout.slice(-800) + r.stderr.slice(-800));
-  assert.match(r.stdout, /改：x0113 動畫分鏡第 2 拍「第二格「安裝」」→「第二格「設定」」（寫回 work\/designs\/x0113\.md）/);
-  assert.equal(BT.parseBeatSheets(read(f)).get('x0113').rows[2].what, '第二格「設定」');
-  assert.equal(S.beatBlocksOf(read(sbOf(dir)), 'x0113'), S.beatBlocksOf(read(f), 'x0113'), '分鏡表＝正本');
+  assert.match(r.stdout, /改：x0111 動畫分鏡第 2 拍「第二格「安裝」」→「第二格「設定」」（寫回 work\/designs\/x0111\.md）/);
+  assert.equal(BT.parseBeatSheets(read(f)).get('x0111').rows[2].what, '第二格「設定」');
+  assert.equal(S.beatBlocksOf(read(sbOf(dir)), 'x0111'), S.beatBlocksOf(read(f), 'x0111'), '分鏡表＝正本');
   assert.equal(ST.storyboardDirty(P), false);
 });
 
-test('步驟 3-2：模板段手改分鏡表一列的綁詞 → --apply-storyboard 印 ⚠（表和 slots 兩邊的詞都印），那張表換回 slots 產生的', (t) => {
+test('步驟 3-2：模板段手改分鏡表一列的綁詞 → --apply-storyboard 印 ⚠（表和 slots 兩邊的詞都印），那張表換回 slots 產生的', { skip: NO_EX }, (t) => {
   const { dir, P } = copyProject(t, EX);
   ST.recordStoryboard(P, read(sbOf(dir)));
-  const before = refsIn(read(sbOf(dir)), 'x0107');
-  const md = read(sbOf(dir)), at = md.indexOf('#### 動畫分鏡 x0107');
-  fs.writeFileSync(sbOf(dir), md.slice(0, at) + md.slice(at).replace('`#21@電腦`', '`#21@下載`'));
-  assert.notDeepEqual(refsIn(read(sbOf(dir)), 'x0107'), before);
+  const before = refsIn(read(sbOf(dir)), 'x0102');
+  const md = read(sbOf(dir)), at = md.indexOf('#### 動畫分鏡 x0102');
+  fs.writeFileSync(sbOf(dir), md.slice(0, at) + md.slice(at).replace('`#7@分享`', '`#7@接下來`'));
+  assert.notDeepEqual(refsIn(read(sbOf(dir)), 'x0102'), before);
   const r = run('build.mjs', ['--project', dir, '--apply-storyboard', '--said', '可以'], { cwd: rootOf(dir) });
   assert.equal(r.status, 0, r.stdout.slice(-800) + r.stderr.slice(-800));
-  assert.match(r.stdout, /⚠ x0107 的動畫分鏡是照 plan\.json 的 slots 產生的，表上手改的拍不會生效：第 5 拍 #21@下載（表）／#21@電腦（slots） → 改 plan\.json 這段 slots 的 flow，再跑 build\.mjs --storyboard --only x0107/);
-  assert.deepEqual(refsIn(read(sbOf(dir)), 'x0107'), before, '表換回 slots 產生的');
-  assert.equal(segOf(planOf(P), 'x0107').slots.flow, '#21@電腦', 'slots 不動');
+  assert.match(r.stdout, /⚠ x0102 的動畫分鏡是照 plan\.json 的 slots 產生的，表上手改的拍不會生效：第 2 拍 #7@接下來（表）／#7@分享（slots） → 改 plan\.json 這段 slots 的 hitAt，再跑 build\.mjs --storyboard --only x0102/);
+  assert.deepEqual(refsIn(read(sbOf(dir)), 'x0102'), before, '表換回 slots 產生的');
+  assert.equal(segOf(planOf(P), 'x0102').slots.hitAt, '#7@分享', 'slots 不動');
 });
 
-test('步驟 3-3：③ 通過後改 slots → --review 更新分鏡表那段、印「跟著正本更新」；status 的階段是 ④，不是「③ 通過，套回 plan.json」', { timeout: 300000 }, (t) => {
+test('步驟 3-3：③ 通過後改 slots → --review 更新分鏡表那段、印「跟著正本更新」；status 的階段是 ④，不是「③ 通過，套回 plan.json」', { skip: NO_EX, timeout: 300000 }, (t) => {
   const { dir, P } = copyProject(t, EX);
   const root = rootOf(dir), proj = 'projects/example';
   ST.recordStoryboard(P, read(sbOf(dir)), { at: Date.now() - 3600e3 });
   const m = run('status.mjs', ['--project', proj, '--mark', '③ 分鏡表', '--state', '通過', '--said', '可以'], { cwd: root });
   assert.equal(m.status, 0, m.stdout + m.stderr);
   const plan = planOf(P);
-  segOf(plan, 'x0107').slots.flow = '#21@下載';
+  segOf(plan, 'x0102').slots.hitAt = '#7@一個';
   writePlan(P, plan);
   const r = run('build.mjs', ['--project', proj, '--review', '--no-prerender'], { cwd: root });
   assert.equal(r.status, 0, r.stdout.slice(-1500) + r.stderr.slice(-800));
-  assert.match(r.stdout, /分鏡表的動畫分鏡跟著正本更新：[^\n]*x0107/);
-  assert.ok(refsIn(read(sbOf(dir)), 'x0107').includes('#21@下載'));
+  assert.match(r.stdout, /分鏡表的動畫分鏡跟著正本更新：[^\n]*x0102/);
+  assert.ok(refsIn(read(sbOf(dir)), 'x0102').includes('#7@一個'));
   const s = run('status.mjs', ['--project', proj, '--json'], { cwd: root });
   const j = JSON.parse(s.stdout);
   assert.notEqual(j.stage, 'S10', `${j.stage} ${j.at}`);
@@ -253,24 +281,24 @@ test('步驟 3-3：③ 通過後改 slots → --review 更新分鏡表那段、�
   assert.match(j.at, /④/);
 });
 
-test('步驟 3-3b：有進度標記的專案（--apply-storyboard 記了 apply-storyboard）→ 改 slots、--review 重寫分鏡表之後，status 一樣不回到 ③', { timeout: 300000 }, (t) => {
+test('步驟 3-3b：有進度標記的專案（--apply-storyboard 記了 apply-storyboard）→ 改 slots、--review 重寫分鏡表之後，status 一樣不回到 ③', { skip: NO_EX, timeout: 300000 }, (t) => {
   const { dir, P } = copyProject(t, EX);
   const root = rootOf(dir), proj = 'projects/example';
   const a = run('build.mjs', ['--project', proj, '--apply-storyboard', '--said', '可以'], { cwd: root });
   assert.equal(a.status, 0, a.stdout.slice(-800) + a.stderr.slice(-800));
   assert.ok(JSON.parse(read(path.join(dir, 'work', '.jobs', 'state.json'))).steps['apply-storyboard'], '--apply-storyboard 記了標記');
   const plan = planOf(P);
-  segOf(plan, 'x0107').slots.flow = '#21@下載';
+  segOf(plan, 'x0102').slots.hitAt = '#7@一個';
   writePlan(P, plan);
   const r = run('build.mjs', ['--project', proj, '--review', '--no-prerender'], { cwd: root });
   assert.equal(r.status, 0, r.stdout.slice(-1500) + r.stderr.slice(-800));
-  assert.match(r.stdout, /分鏡表的動畫分鏡跟著正本更新：[^\n]*x0107/);
+  assert.match(r.stdout, /分鏡表的動畫分鏡跟著正本更新：[^\n]*x0102/);
   const j = JSON.parse(run('status.mjs', ['--project', proj, '--json'], { cwd: root }).stdout);
   assert.notEqual(j.stage, 'S10', `${j.stage} ${j.at}`);
   assert.match(j.at, /④/);
 });
 
-test('步驟 3-4：分鏡表 dirty（③ 待回覆、使用者在網頁改到一半）→ refresh 不寫、印那一行；--to-design 也一樣', (t) => {
+test('步驟 3-4：分鏡表 dirty（③ 待回覆、使用者在網頁改到一半）→ refresh 不寫、印那一行；--to-design 也一樣', { skip: NO_EX }, (t) => {
   const { dir, P } = copyProject(t, EX);
   ST.recordStoryboard(P, read(sbOf(dir)));
   fs.writeFileSync(sbOf(dir), read(sbOf(dir)).replace('- 音效：', '- 補充說明：還在想\n- 音效：'));
@@ -279,7 +307,7 @@ test('步驟 3-4：分鏡表 dirty（③ 待回覆、使用者在網頁改到一
   assert.equal(r.skipped, 'dirty');
   assert.equal(r.line, '分鏡表有改動還沒套回，動畫分鏡這次沒更新');
   assert.equal(read(sbOf(dir)), md, '不寫');
-  const td = run('build.mjs', ['--project', dir, '--to-design', 'x0113'], { cwd: rootOf(dir) });
+  const td = run('build.mjs', ['--project', dir, '--to-design', 'x0111'], { cwd: rootOf(dir) });
   assert.equal(td.status, 0, td.stdout.slice(-800) + td.stderr.slice(-800));
   assert.match(td.stdout, /分鏡表有改動還沒套回，動畫分鏡這次沒更新/);
   assert.equal(read(sbOf(dir)), md, '--to-design 也不寫');
@@ -291,82 +319,88 @@ const V = await imp('versions.mjs');
 const handEdit = (P, id, file, find, add) => { const f = path.join(P.out, 'compositions', file); fs.writeFileSync(f, read(f).replace(find, `${find}\n    ${add}`)); };
 const quiet = () => { const logs = []; return { logs, log: (l) => logs.push(l) }; };
 
-test('步驟 4-1：手改模板段 save → 版本裡有 鏡位腳本.md；use 退回沒手改的版 → designs 搬到 .old/、owner 回到 plan', (t) => {
+test('步驟 4-1：手改模板段 save → 版本裡有 鏡位腳本.md；use 退回沒手改的版 → designs 搬到 .old/、owner 回到 plan', { skip: NO_EX }, (t) => {
   const { dir, P } = copyProject(t, EX);
   const { log } = quiet(), flags = { 'no-preview': true };
-  const v1 = V.saveSeg(P, flags, 'x0110', log);
+  const v1 = V.saveSeg(P, flags, 'x0108', log);
   assert.ok(!fs.existsSync(path.join(v1.dir, '鏡位腳本.md')), '沒手改：拍點在 plan.json，不存鏡位腳本');
-  handEdit(P, 'x0110', 'x-scene-x0110.html', "const T3 = P.at('#49@順手');", '// 手改');
+  handEdit(P, 'x0108', 'x-scene-x0108.html', "const T3 = P.at('#44@段落');", '// 手改');
   const b = run('build.mjs', ['--project', dir]);
   assert.equal(b.status, 0, b.stdout.slice(-800) + b.stderr.slice(-800));
-  assert.match(b.stdout, /x0110 的動畫檔手改過：拍點改 work\/designs\/x0110\.md/);
-  const f = path.join(dir, 'work', 'designs', 'x0110.md');
+  assert.match(b.stdout, /x0108 的動畫檔手改過：拍點改 work\/designs\/x0108\.md/);
+  const f = path.join(dir, 'work', 'designs', 'x0108.md');
   assert.ok(fs.existsSync(f));
-  const v2 = V.saveSeg(P, flags, 'x0110', log);
+  const v2 = V.saveSeg(P, flags, 'x0108', log);
   assert.equal(v2.n, 2);
   assert.equal(read(path.join(v2.dir, '鏡位腳本.md')), read(f), '手改模板段：鏡位腳本一起存');
-  V.useVersion(P, flags, 'x0110', 'v1', log);
+  V.useVersion(P, flags, 'x0108', 'v1', log);
   assert.ok(!fs.existsSync(f), 'designs 搬走了');
-  const olds = fs.readdirSync(path.join(dir, 'work', 'designs', '.old')).filter((n) => n.startsWith('x0110-'));
+  const olds = fs.readdirSync(path.join(dir, 'work', 'designs', '.old')).filter((n) => n.startsWith('x0108-'));
   assert.equal(olds.length, 1);
-  assert.equal(S.beatOwnerOf(P, segOf(planOf(P), 'x0110'), { lib: B.loadLib(P.templateDir, P.project) }).owner, 'plan');
+  assert.equal(S.beatOwnerOf(P, segOf(planOf(P), 'x0108'), { lib: B.loadLib(P.templateDir, P.project) }).owner, 'plan');
 });
 
-test('步驟 4-2：模板段提案加一拍、accept 後只改了別的字（slots 的綁詞沒照提案改）→ finish 印 promised 的 ⚠', { timeout: 300000 }, (t) => {
+test('步驟 4-2：模板段提案加一拍、accept 後只改了別的字（slots 的綁詞沒照提案改）→ finish 印 promised 的 ⚠', { skip: NO_EX, timeout: 300000 }, (t) => {
   const { dir, P } = copyProject(t, EX);
   const { logs, log } = quiet(), flags = { 'no-preview': true };
-  V.beginRound(P, flags, ['x0108'], 'x0108 多一拍主持人', log);
-  const pr = V.newProposal(P, flags, 'x0108', log, 'x0108 多一拍主持人');
-  const md = read(pr.file).replace(/^- （寫 1–5 條[^\n]*$/m, '- 多一拍：講到主持人時第四站亮起');
-  const lines = md.split('\n'), k = lines.findIndex((l) => l.includes('`#30@訪談`'));
+  V.beginRound(P, flags, ['x0110'], 'x0110 多一拍原型', log);
+  const pr = V.newProposal(P, flags, 'x0110', log, 'x0110 多一拍原型');
+  const md = read(pr.file).replace(/^- （寫 1–5 條[^\n]*$/m, '- 多一拍：講到產品原型時第四站亮起');
+  const lines = md.split('\n'), k = lines.findIndex((l) => l.includes('`#59@播放檢查`'));
   assert.ok(k > 0, md);
-  lines.splice(k + 1, 0, '| 4 | `#31@主持人` | 第四站「主持人」 | 彈出（第四站） | 第四站 | — |');
+  lines.splice(k + 1, 0, '| 4 | `#60@原型` | 第四站「原型」 | 彈出（第四站） | 第四站 | — |');
   fs.writeFileSync(pr.file, lines.join('\n'));
-  V.acceptProposal(P, 'x0108', log);
+  V.acceptProposal(P, 'x0110', log);
   const meta = JSON.parse(read(path.join(path.dirname(pr.file), '.meta.json')));
-  assert.ok(meta.promised.includes('#31@主持人'), JSON.stringify(meta.promised));
+  assert.ok(meta.promised.includes('#60@原型'), JSON.stringify(meta.promised));
   const plan = planOf(P);
-  segOf(plan, 'x0108').slots.title = '多機拍攝的三種情境';
+  segOf(plan, 'x0110').slots.title = '工具運作三步驟';
   writePlan(P, plan);
   const rep = V.finishRound(P, flags, log);
   assert.deepEqual(rep.errors, [], logs.join('\n'));
-  assert.ok(rep.warnings.some((w) => /^⚠ x0108：v\d+ 提案確認的拍是 [^\n]*#31@主持人[^\n]*，現在 plan\.json 產生的是 [^\n]* → 照提案改 slots；模板做不到就交給子代理手改動畫檔（拍點會移到 work\/designs\/x0108\.md）/.test(w)), rep.warnings.join('\n'));
+  assert.ok(rep.warnings.some((w) => /^⚠ x0110：v\d+ 提案確認的拍是 [^\n]*#60@原型[^\n]*，現在 plan\.json 產生的是 [^\n]* → 照提案改 slots；模板做不到就交給子代理手改動畫檔（拍點會移到 work\/designs\/x0110\.md）/.test(w)), rep.warnings.join('\n'));
 });
 
-test('步驟 4-3：內容設計段提案 accept → work/designs/<段>.md 的表＝提案的表（舊的備份在 .old/）；storyboard.md 那節一致', (t) => {
+test('步驟 4-3：內容設計段提案 accept → work/designs/<段>.md 的表＝提案的表（舊的備份在 .old/）；storyboard.md 那節一致', { skip: NO_EX }, (t) => {
   const { dir, P } = copyProject(t, EX);
   const { log } = quiet(), flags = { 'no-preview': true };
-  const td = run('build.mjs', ['--project', dir, '--to-design', 'x0113'], { cwd: rootOf(dir) });
+  const td = run('build.mjs', ['--project', dir, '--to-design', 'x0111'], { cwd: rootOf(dir) });
   assert.equal(td.status, 0, td.stdout.slice(-800) + td.stderr.slice(-800));
-  const f = path.join(dir, 'work', 'designs', 'x0113.md');
-  fs.writeFileSync(f, ['概念：三格依序亮起', '', '#### 動畫分鏡 x0113', '', BEAT_HEAD,
+  const f = path.join(dir, 'work', 'designs', 'x0111.md');
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, ['概念：三格依序亮起', '', '#### 動畫分鏡 x0111', '', BEAT_HEAD,
     '| 0 | 段起點 | 標題「本集三個部分」 | 開場 | 標題 | — |', '| 1 | `#64@下載` | 第一格「實作」 | 彈出（第一格） | 第一格 | — |', ''].join('\n'));
-  S.refreshStoryboard(P, planOf(P), { only: ['x0113'], force: true });
-  const pr = V.newProposal(P, flags, 'x0113', log, 'x0113 多一格');
+  S.refreshStoryboard(P, planOf(P), { only: ['x0111'], force: true });
+  const pr = V.newProposal(P, flags, 'x0111', log, 'x0111 多一格');
   const md = read(pr.file).replace(/^- （寫 1–5 條[^\n]*$/m, '- 多一格：安裝');
   const lines = md.split('\n'), k = lines.findIndex((l) => l.includes('`#64@下載`'));
   assert.ok(k > 0, md);
   lines.splice(k + 1, 0, '| 2 | `#66@安裝` | 第二格「安裝」 | 彈出（第二格） | 第二格 | — |');
   fs.writeFileSync(pr.file, lines.join('\n'));
-  V.acceptProposal(P, 'x0113', log);
-  assert.deepEqual(refsIn(read(f), 'x0113'), ['#64@下載', '#66@安裝']);
-  assert.equal(S.beatBlocksOf(read(f), 'x0113'), S.beatBlocksOf(read(pr.file), 'x0113'), 'designs 的表＝提案的表');
+  V.acceptProposal(P, 'x0111', log);
+  assert.deepEqual(refsIn(read(f), 'x0111'), ['#64@下載', '#66@安裝']);
+  assert.equal(S.beatBlocksOf(read(f), 'x0111'), S.beatBlocksOf(read(pr.file), 'x0111'), 'designs 的表＝提案的表');
   assert.match(read(f), /^概念：三格依序亮起/, '表以外的行留著');
-  assert.ok(fs.readdirSync(path.join(dir, 'work', 'designs', '.old')).some((n) => n.startsWith('x0113-')), '舊的備份');
+  assert.ok(fs.readdirSync(path.join(dir, 'work', 'designs', '.old')).some((n) => n.startsWith('x0111-')), '舊的備份');
   const sb = read(sbOf(dir));
-  assert.equal(S.beatBlocksOf(sb, 'x0113'), S.beatBlocksOf(read(f), 'x0113'));
-  assert.match(sb, /- 拍點正本：work\/designs\/x0113\.md/);
+  assert.equal(S.beatBlocksOf(sb, 'x0111'), S.beatBlocksOf(read(f), 'x0111'));
+  assert.match(sb, /- 拍點正本：work\/designs\/x0111\.md/);
 });
 
 // ---------- P3c 回報：--merge-drafts 的檢查和 --check-draft 同一個等級 ----------
 
-test('--merge-drafts：第一拍來不及做完開場（audit 是 ✖）合併時就 ✖，不產生分鏡表、不停 ③', (t) => {
+test('--merge-drafts：第一拍來不及做完開場（audit 是 ✖）合併時就 ✖，不產生分鏡表、不停 ③', { skip: NO_EX }, (t) => {
   const { dir } = copyProject(t, EX);
+  // 分章草稿裡兩段的第一拍綁在段起點那句（開場還沒做完就到了）
+  const draft = path.join(dir, 'work', 'drafts', 'ch01.json'), dj = JSON.parse(read(draft));
+  dj.segments.find((s) => s.id === 'x0105').slots.items[0].at = '#20@過去';
+  dj.segments.find((s) => s.id === 'x0111').slots.items[0].at = '#62@這集';
+  fs.writeFileSync(draft, JSON.stringify(dj, null, 2));
   const sb = read(sbOf(dir));
   const r = run('build.mjs', ['--project', dir, '--merge-drafts', '--force'], { cwd: rootOf(dir) });
   assert.equal(r.status, 1, r.stdout.slice(-1500));
-  assert.match(r.stdout, /^✖ \[x0107 custom\] 動畫分鏡：第一拍 \S+ 在段內 /m);
-  assert.match(r.stdout, /^✖ \[x0113 custom\] 動畫分鏡：第一拍 \S+ 在段內 /m);
+  assert.match(r.stdout, /^✖ \[x0105 custom\] 動畫分鏡：第一拍 \S+ 在段內 /m);
+  assert.match(r.stdout, /^✖ \[x0111 custom\] 動畫分鏡：第一拍 \S+ 在段內 /m);
   assert.match(r.stdout, /^未通過：2 個 ✖/m);
   assert.doesNotMatch(r.stdout, /^通過：/m);
   assert.doesNotMatch(r.stdout, /⏸ 停點 ③/);
@@ -380,23 +414,24 @@ const W = await imp('editor/server/write.mjs');
 const RM = await imp('lib/beat-remap.mjs');
 const backups = (f) => fs.readdirSync(path.dirname(f)).filter((n) => n.startsWith(`${path.basename(f)}.align-`));
 
-test('步驟 5：剪輯台把 #63 分成兩句 → plan.json、鏡位腳本、動畫檔在那之後的句號都 +1（各有 .align-* 備份），audit 0 個 beats ✖；srt-align --remap-plan 重新斷句 → 一起換回來', { timeout: 300000 }, (t) => {
+test('步驟 5：剪輯台把 #63 分成兩句 → plan.json、鏡位腳本、動畫檔在那之後的句號都 +1（各有 .align-* 備份），audit 0 個 beats ✖；srt-align --remap-plan 重新斷句 → 一起換到新的句號', { skip: NO_EX, timeout: 300000 }, (t) => {
   const { dir, P } = copyProject(t, EX);
   const root = rootOf(dir);
-  const td = run('build.mjs', ['--project', dir, '--to-design', 'x0113'], { cwd: root });
+  const td = run('build.mjs', ['--project', dir, '--to-design', 'x0111'], { cwd: root });
   assert.equal(td.status, 0, td.stdout.slice(-800) + td.stderr.slice(-800));
-  const animRel = F.designFileOf(segOf(planOf(P), 'x0113'));
-  const f = path.join(dir, 'work', 'designs', 'x0113.md'), anim = path.join(P.out, animRel);
-  fs.writeFileSync(f, ['概念：三格依序亮起', '', '#### 動畫分鏡 x0113', '', BEAT_HEAD,
+  const animRel = F.designFileOf(segOf(planOf(P), 'x0111'));
+  const f = path.join(dir, 'work', 'designs', 'x0111.md'), anim = path.join(P.out, animRel);
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, ['概念：三格依序亮起', '', '#### 動畫分鏡 x0111', '', BEAT_HEAD,
     '| 0 | 段起點 | 標題「本集三個部分」 | 開場 | 標題 | — |', '| 1 | `#64@下載`＋0.2 | 第一格「實作」 | 彈出（第一格） | 第一格 | — |', ''].join('\n'));
   const html = read(anim);
   assert.ok(html.includes('const P = SceneMotion('));
   fs.writeFileSync(anim, html.replace(/(const P = SceneMotion\([^\n]*\n)/, "$1    const T1 = P.at('#64@下載', 0.2);\n"));
-  const seg0 = segOf(planOf(P), 'x0113');
-  assert.deepEqual([seg0.from, seg0.to], ['#62+1.3', '#70e']);
+  const seg0 = segOf(planOf(P), 'x0111');
+  assert.deepEqual([seg0.from, seg0.to], ['#62', '#70e']);
 
   // 剪輯台：applySave（純函式）算出新的 plan.json、rough.srt → 寫好 → remapScriptsAfterSave（editor.mjs 存檔後呼叫）
-  // 分 #63（x0113 段內、第一拍 #64 之前）：之後沒有別的模板段（模板段字串欄位的句號、moods 剪輯台本來就不重對，不在這次範圍）
+  // 分 #63（x0111 段內、第一拍 #64 之前）：之後沒有別的模板段（模板段字串欄位的句號、moods 剪輯台本來就不重對，不在這次範圍）
   const planText = read(P.plan), srtText = read(P.srt), ops = [{ op: 'split', n: 63, at: 137 }];
   const s = W.applySave(planText, { srt: { ops } }, { srtText });
   assert.deepEqual(s.errors, []);
@@ -404,30 +439,34 @@ test('步驟 5：剪輯台把 #63 分成兩句 → plan.json、鏡位腳本、�
   fs.writeFileSync(P.srt, s.srtText);
   const lib = B.loadLib(P.templateDir, P.project);
   const r = W.remapScriptsAfterSave(P, { planBefore: planText, srtTextBefore: srtText, ops, lib });
-  assert.deepEqual({ scripts: r.scripts, anims: r.anims }, { scripts: ['work/designs/x0113.md'], anims: [`work/hyperframes/${animRel}`] });
+  assert.deepEqual({ scripts: r.scripts, anims: r.anims }, { scripts: ['work/designs/x0111.md'], anims: [`work/hyperframes/${animRel}`] });
   assert.deepEqual(r.changes.map((c) => c.file).sort(), [f, anim].sort(), '074：改之前、之後的內容記著（剪輯台復原時換回去）');
-  assert.deepEqual([segOf(planOf(P), 'x0113').from, segOf(planOf(P), 'x0113').to], ['#62+1.3', '#71e']);
+  assert.deepEqual([segOf(planOf(P), 'x0111').from, segOf(planOf(P), 'x0111').to], ['#62', '#71e']);
   assert.match(read(f), /\| 1 \| `#65@下載`＋0\.2 \|/);
   assert.match(read(anim), /P\.at\('#65@下載', 0\.2\)/);
   assert.equal(backups(f).length, 1);
   assert.equal(backups(anim).length, 1);
   const b = run('build.mjs', ['--project', dir], { cwd: root });
   assert.equal(b.status, 0, b.stdout.slice(-800) + b.stderr.slice(-800));
-  assert.deepEqual(beatErrors(auditOf(dir, 'x0113'), 'x0113').map((x) => x.msg), []);
+  assert.deepEqual(beatErrors(auditOf(dir, 'x0111'), 'x0111').map((x) => x.msg), []);
 
-  // srt-align --remap-plan：照講稿重新斷句（分開的那句合回去）→ 鏡位腳本、動畫檔照時間換回 #64
+  // srt-align --remap-plan：照講稿重新斷句 → 鏡位腳本、動畫檔照時間換到新的句號。
+  // 這個範例的 rough.srt 在剪輯台調過（70 則），照講稿重排後句號整個不一樣：不寫死句號，找「下載 APP」那一則現在是第幾則
   const a = run('media.mjs', ['srt-align', '--project', dir, '--remap-plan'], { cwd: root });
   assert.equal(a.status, 0, a.stdout.slice(-1500) + a.stderr.slice(-800));
   assert.match(a.stdout, new RegExp(`情境動畫的 P\\.at 句號一起換：${animRel.replace(/[.]/g, '\\.')}（各自備份 \\.align-<時間戳>）`));
-  assert.match(a.stdout, /鏡位腳本的「講到」句號一起換：work\/designs\/x0113\.md（各自備份 \.align-<時間戳>）/);
-  assert.deepEqual([segOf(planOf(P), 'x0113').from, segOf(planOf(P), 'x0113').to], ['#62+1.3', '#70e']);
-  assert.match(read(f), /\| 1 \| `#64@下載`＋0\.2 \|/);
-  assert.match(read(anim), /P\.at\('#64@下載', 0\.2\)/);
+  assert.match(a.stdout, /鏡位腳本的「講到」句號一起換：work\/designs\/x0111\.md（各自備份 \.align-<時間戳>）/);
+  const cue = read(P.srt).trim().split(/\r?\n\s*\r?\n/).map((b) => b.split(/\r?\n/)).find((c) => c.slice(2).join('').includes('APP'));
+  assert.ok(cue, '重新斷句後找得到「下載 APP」那一則');
+  const n = Number(cue[0]);
+  assert.notDeepEqual([segOf(planOf(P), 'x0111').from, segOf(planOf(P), 'x0111').to], ['#62', '#71e'], '段的起迄也照時間換了');
+  assert.match(read(f), new RegExp(`\\| 1 \\| \`#${n}@下載\`＋0\\.2 \\|`));
+  assert.match(read(anim), new RegExp(`P\\.at\\('#${n}@下載', 0\\.2\\)`));
   assert.equal(backups(f).length, 2);
   assert.equal(backups(anim).length, 2);
   const b2 = run('build.mjs', ['--project', dir], { cwd: root });
   assert.equal(b2.status, 0, b2.stdout.slice(-800) + b2.stderr.slice(-800));
-  assert.deepEqual(beatErrors(auditOf(dir, 'x0113'), 'x0113').map((x) => x.msg), []);
+  assert.deepEqual(beatErrors(auditOf(dir, 'x0111'), 'x0111').map((x) => x.msg), []);
 });
 
 test('步驟 5：remapBeatTable 只換「#### 動畫分鏡」表的「講到」欄（說明文字、別的表、別的欄不動）；media.mjs 照舊匯出 remapCustomRefs', async () => {

@@ -906,7 +906,7 @@ test('versions.mjs done：照修改單改的一輪，回來一段就 build、寫
   editPlan(p, (j) => { seg(j, 's08').slots.text = '單欄'; });
   const l3 = [];
   V.doneSegs(c.P, {}, ['s08'], (l) => l3.push(l), stepsOf().steps);
-  assert.match(l3.join('\n'), /修改單的段都回報了 → 下一步：.*versions\.mjs finish/);
+  assert.match(l3.join('\n'), /→ 下一步：修改單的段都回報了\n.*versions\.mjs finish/);
   // finish 照舊：版本、驗證，那一列補上版本號
   const r = V.finishRound(c.P, {}, () => {}, stepsOf().steps);
   assert.equal(r.ok, true);

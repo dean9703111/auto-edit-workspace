@@ -540,19 +540,20 @@ test('位移 ⚠（C-03）：門檻 6.5 %、看 95 百分位；dispSummary／dis
   assert.ok(at(1.2) < L.DISP_WARN && at(1.2) > 0.05, `slim 1.2：${(at(1.2) * 100).toFixed(2)}%`);
 });
 
-test('位移 ⚠ 校準（C-03）：示範口播 15–25 秒、landmark 放大 2 倍，slim 0.6／0.8 不 ⚠、1.05 ⚠（各留 0.5 % 邊距）', { skip: (!HAS_CHROME && '沒有 HyperFrames 的 Chrome') || (!fs.existsSync(DEMO) && '沒有示範口播') || (!HAS_FFMPEG && '沒有 ffmpeg'), timeout: 180000 }, async () => {
+test('位移 ⚠ 校準（C-03）：示範口播 15–25 秒、landmark 放大 2 倍，slim 0.6／0.8 不 ⚠、1.1 ⚠（各留 0.5 % 邊距）', { skip: (!HAS_CHROME && '沒有 HyperFrames 的 Chrome') || (!fs.existsSync(DEMO) && '沒有示範口播') || (!HAS_FFMPEG && '沒有 ffmpeg'), timeout: 180000 }, async () => {
   const { openDetector, detectLandmarks } = await imp('lib/landmarks.mjs');
   const clip = path.join(tmpDir(), 'clip.mp4');
   assert.equal(spawnSync('ffmpeg', ['-y', '-v', 'error', '-ss', '15', '-i', DEMO, '-t', '10', '-an', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '12', clip]).status, 0);
   const det = await openDetector({ vendorDir: path.join(TEMPLATE, 'vendor', 'mediapipe') });
   let r;
   try { r = await detectLandmarks({ video: clip, detector: det }); } finally { await det.close(); }
-  // 640×360 偵測、landmark 放大 2 倍＝1280×720 rough-look 的量法（位移比和解析度無關；原尺寸臉寬 43 px 會被當成太小）
+  // landmark 放大 2 倍＝rough-look 的量法（位移比和解析度無關）。寬高照影片量，換示範口播不用改這裡。
+  // 2026-11-18 換的這支（854×480、臉寬約 89 px）：0.6→3.48%、0.8→4.90%、1.05→6.87%（會 ⚠ 但邊距不到 0.5%）、1.1→7.29%
   const track = L.loadTrack({ frames: r.frames }, { lookScale: 2 });
-  const p95 = [0.6, 0.8, 1.05].map((slim) => L.dispStats({ track, slim, w: 1280, h: 720, lookScale: 2 }).p95);
+  const p95 = [0.6, 0.8, 1.1].map((slim) => L.dispStats({ track, slim, w: r.video.width * 2, h: r.video.height * 2, lookScale: 2 }).p95);
   const msg = p95.map((x) => `${(x * 100).toFixed(2)}%`).join('／');
   assert.ok(p95[0] < L.DISP_WARN - 0.005 && p95[1] < L.DISP_WARN - 0.005, `0.6／0.8 要不 ⚠：${msg}`);
-  assert.ok(p95[2] > L.DISP_WARN + 0.005, `1.05 要 ⚠：${msg}`);
+  assert.ok(p95[2] > L.DISP_WARN + 0.005, `1.1 要 ⚠：${msg}`);
 });
 
 test('Chrome 暫存 profile：開新的之前清掉超過 1 天的 look-lm-*，別的前綴與新的不動（C-13）', async () => {
@@ -620,20 +621,20 @@ test('資產：vendor/mediapipe 的 5 個檔和 manifest 的大小與 sha256 一
   assert.equal(L.assetsStatus(v, { sha: true }).ok, true);
 });
 
-test('偵測：示範口播前 3 秒，偵測率 ≥ 95 %、臉寬 35–55 px', { skip: (!HAS_CHROME && '沒有 HyperFrames 的 Chrome') || (!fs.existsSync(DEMO) && '沒有示範口播') || (!HAS_FFMPEG && '沒有 ffmpeg'), timeout: 120000 }, async () => {
+test('偵測：示範口播前 3 秒，偵測率 ≥ 95 %、臉寬 75–105 px', { skip: (!HAS_CHROME && '沒有 HyperFrames 的 Chrome') || (!fs.existsSync(DEMO) && '沒有示範口播') || (!HAS_FFMPEG && '沒有 ffmpeg'), timeout: 120000 }, async () => {
   const { openDetector, detectLandmarks, locateFaces } = await imp('lib/landmarks.mjs');
   const t = tmpDir(), clip = path.join(t, 'clip.mp4');
   assert.equal(spawnSync('ffmpeg', ['-y', '-v', 'error', '-i', DEMO, '-t', '3', '-c', 'copy', clip]).status, 0);
   const det = await openDetector({ vendorDir: path.join(TEMPLATE, 'vendor', 'mediapipe') });
   try {
     const loc = await locateFaces({ video: clip, times: [1.5], detector: det });
-    assert.ok(loc[0] && loc[0].fw > 35 && loc[0].fw < 55, JSON.stringify(loc));
+    assert.ok(loc[0] && loc[0].fw > 75 && loc[0].fw < 105, JSON.stringify(loc));   // 2026-11-18 換的示範口播（854×480）：約 89 px
     const r = await detectLandmarks({ video: clip, detector: det });
     const ok = r.frames.filter((f) => f && typeof f === 'object');
     assert.ok(ok.length / r.frames.length >= 0.95, `偵測率 ${ok.length}/${r.frames.length}`);
     const fws = ok.map((f) => L.faceWidth(L.lmFromP(f.p))).sort((a, b) => a - b);
     const med = fws[fws.length >> 1];
-    assert.ok(med > 35 && med < 55, `臉寬中位數 ${med}`);
+    assert.ok(med > 75 && med < 105, `臉寬中位數 ${med}`);
     assert.equal(ok[0].p.length, 116);
   } finally { await det.close(); }
 });

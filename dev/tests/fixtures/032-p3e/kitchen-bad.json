@@ -35,7 +35,8 @@
    "chInfo": {
     "cue": 2,
     "gap": 0.5,
-    "placement": "cover"
+    "placement": "cover",
+    "duration": 2.5
    },
    "end": 7,
    "planEnd": 7,
@@ -1848,22 +1849,22 @@
      "view": {
       "contain": [
        120,
-       0,
+       47,
        720,
-       940
+       846
       ],
       "cover": [
        120,
-       0,
+       47,
        720,
-       940
+       846
       ]
      },
      "focus": [
       120,
-      0,
+      47,
       720,
-      940
+      846
      ],
      "screen": [
       0,
@@ -2331,7 +2332,8 @@
    "chInfo": {
     "cue": 2,
     "gap": 0.5,
-    "placement": "cover"
+    "placement": "cover",
+    "duration": 2.5
    },
    "end": 7,
    "planEnd": 7,
@@ -4144,22 +4146,22 @@
      "view": {
       "contain": [
        120,
-       0,
+       47,
        720,
-       940
+       846
       ],
       "cover": [
        120,
-       0,
+       47,
        720,
-       940
+       846
       ]
      },
      "focus": [
       120,
-      0,
+      47,
       720,
-      940
+      846
      ],
      "screen": [
       0,
