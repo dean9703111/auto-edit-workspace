@@ -4,9 +4,9 @@
 
 ## 2. 背景：選路
 
-把能力表貼給使用者。選路：在 R9.3 路由表找你這個模型那一列（MiniMax Code 是 MiniMax 系列、Claude Code 是 Claude 系列），從第一選擇往右找，第一個出現在 caps.mjs「可用的生圖路線」那一行裡的就用它（那一行的順序不是優先序）；寫一句選了哪條、為什麼。直式專案先沿用三張橫式背景（取中間），不用另做直式背景。
+把能力表貼給使用者。選路：走 caps.mjs 最後印的「這次生圖走：<路線>」那一條，它已經照 `shared/setting.json` 的設定和這台能用的工具算好，不要自己換別條；印「認不出現在是哪個 Agent」時，走它下面那幾行裡你這個 Agent 的那一行。使用者說要換（「生圖改用 Codex」）才跑 `node shared/template/tools/brand.mjs image <路線>`，再重跑 caps.mjs。直式專案先沿用三張橫式背景（取中間），不用另做直式背景。
 
-常見錯誤：想幫使用者安裝 codex／mmx 或登入 → 不要，沒裝不裝、沒登入不登入，直接走下一條路（AGENTS.md 規則 3、工具注意事項）；使用者也要換暗色背景（`bg-fs-dark.jpg`、`bg-side-dark.jpg`、`bg-ch-dark.jpg`）→ HTML 路線還不能做暗色，走 mmx（`references/image-routing.md` 第 3 節的暗色提示詞）或使用者的圖，亮、暗各三張一起過停點 ⑥；沒有 mmx 也沒有使用者的圖，亮色三張照常換，暗色沿用目前的，回報寫「暗色背景沒換，要 mmx 或你給圖」。
+常見錯誤：想幫使用者安裝 codex／mmx／agy 或登入 → 不要，沒裝不裝、沒登入不登入，照 caps.mjs 印的走（它已經退到 HTML）（AGENTS.md 規則 3、工具注意事項）；使用者也要換暗色背景（`bg-fs-dark.jpg`、`bg-side-dark.jpg`、`bg-ch-dark.jpg`）→ HTML 路線還不能做暗色，走 mmx（`references/image-routing.md` 第 3 節的暗色提示詞）或使用者的圖，亮、暗各三張一起過停點 ⑥；沒有 mmx 也沒有使用者的圖，亮色三張照常換，暗色沿用目前的，回報寫「暗色背景沒換，要 mmx 或你給圖」。
 
 ## 3. 生成到暫存資料夾、驗證、預覽
 

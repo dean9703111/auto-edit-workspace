@@ -17,7 +17,7 @@
 | 「整理這集的調整給 AI」「照這集的調整紀錄學我的習慣」 | `auto-edit-review` 的 `references/learn-habits.md` |
 | 「可以了，輸出完成影片」「輸出剪映素材」（剪輯台已經輸出過就不要重做） | `auto-edit-deliver` |
 | 「做封面」「做縮圖」 | `auto-edit-deliver` 的 `references/cover.md` |
-| 「換風格」「換主色」「換背景」「換暗色」「換字幕樣式」「講者設定成…」「設定片尾」 | `auto-edit-style` |
+| 「換風格」「換主色」「換背景」「換暗色」「換字幕樣式」「講者設定成…」「設定片尾」「生圖改用…」 | `auto-edit-style` |
 | 「生成配樂」「換配樂」「這集不要底樂」「用我自己的音樂」「片尾配樂」 | `auto-edit-style` 的 `references/music.md` |
 | 「拆這支參考片」（要給影片檔的路徑） | `auto-edit-style` 的 `references/reference-video.md` |
 | 「子代理一次派 N 個」 | 不用 Skill：`node shared/template/tools/status.mjs --agents <N>` |

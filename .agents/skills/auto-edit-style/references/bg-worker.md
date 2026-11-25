@@ -1,6 +1,6 @@
 # 背景圖工人的派工模板（同時生成）
 
-給 `auto-edit-style` 步驟 3 用：生圖路線（Codex、mmx、自己的生圖工具）和 HTML 路線，每張圖派一個工人（亮色 3 個；亮暗都要 6 個）。「使用者的圖」只跑 `brand.mjs bg --image`，不用派。
+給 `auto-edit-style` 步驟 3 用：生圖路線（Codex、Antigravity、mmx、自己的生圖工具）和 HTML 路線，每張圖派一個工人（亮色 3 個；亮暗都要 6 個）。「使用者的圖」只跑 `brand.mjs bg --image`，不用派。
 
 工人只寫 `<暫存資料夾>/<種類>/` 和 `<暫存資料夾>/bg-<種類>.jpg`（暗色 `bg-<種類>-dark.jpg`；HTML 路線的 `brand.mjs bg` 另外會寫 `zones-<種類>.jpg`，正常），不寫 `shared/`、plan.json，不跑 `brand.mjs pack`、`use`。
 
@@ -20,7 +20,7 @@
 
 【風格】讀 <暫存資料夾>/brief.md，照做，不要改方向。
 【規格】<尺寸>；留空區：<R9.2 這一張的留空區原文>；圖片不含文字、標誌、卡片。
-【路線】<Codex／mmx／自己的生圖工具／HTML>。指令照 .agents/skills/auto-edit-style/references/image-routing.md 第 <節>，裡面的 $TMP 換成 <暫存資料夾>/<種類>（Codex 的參考圖仍用 <暫存資料夾>/ref.jpg）。最後把成品存成 <暫存資料夾>/bg-<種類>.jpg（不是子資料夾裡）：png 或挑好的圖用第 1 節那一條轉，--image 寫你的圖、--kind <種類>、--out <暫存資料夾>。HTML 路線：HTML 寫在 <暫存資料夾>/<種類>/bg-<種類>.html，--out 寫 <暫存資料夾>。它印「還沒做」別張是因為別張由別的工人做，正常，不要做別張。
+【路線】<Codex／Antigravity／mmx／自己的生圖工具／HTML>。指令照 .agents/skills/auto-edit-style/references/image-routing.md 第 <節>，裡面的 $TMP 換成 <暫存資料夾>/<種類>（Codex 的參考圖仍用 <暫存資料夾>/ref.jpg）。最後把成品存成 <暫存資料夾>/bg-<種類>.jpg（不是子資料夾裡）：png 或挑好的圖用第 1 節那一條轉，--image 寫你的圖、--kind <種類>、--out <暫存資料夾>。HTML 路線：HTML 寫在 <暫存資料夾>/<種類>/bg-<種類>.html，--out 寫 <暫存資料夾>。它印「還沒做」別張是因為別張由別的工人做，正常，不要做別張。
 【驗收】
 1. brand.mjs bg 印 bg-<種類>.jpg（<寬>×<高> ✓）；印 ✖ 就照那一行的 → 做。
 2. 留空區裡沒有裝飾（brand.mjs bg 印 ✓ 留空區乾淨）。
@@ -30,7 +30,7 @@
 
 ## 回報格式（工人交回，只回一行）
 
-- 做完：`bg-<種類>.jpg <寬>×<高>｜<Codex／mmx／自己的生圖工具／HTML>｜留空區：<乾淨／哪一區有裝飾>`
+- 做完：`bg-<種類>.jpg <寬>×<高>｜<Codex／Antigravity／mmx／自己的生圖工具／HTML>｜留空區：<乾淨／哪一區有裝飾>`
 - 失敗：`bg-<種類>.jpg ✖｜<路線>｜<失敗原文>`
 
 ## 收件（主代理做）

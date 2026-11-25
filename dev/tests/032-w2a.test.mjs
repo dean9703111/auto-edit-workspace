@@ -311,7 +311,7 @@ test('A3／A4 finish：最後是回報段（工具知道的填好、停點那兩
 });
 
 test('C6 ensureEditor：沒開就在背景開、回傳各頁網址（不印東西）；開著就沿用；CLI 印的字不變', { timeout: 60000 }, async (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-032w2a-ed-'));
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'hf-032w2a-ed-')));   // macOS 的 /var 是連到 /private/var 的連結，照實際路徑比才認得出同一個專案
   fs.mkdirSync(path.join(root, 'shared'), { recursive: true });
   fs.symlinkSync(TEMPLATE, path.join(root, 'shared', 'template'), 'dir');
   const project = path.join(root, 'projects', 'ens');

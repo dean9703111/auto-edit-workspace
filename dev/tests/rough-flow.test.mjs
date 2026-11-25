@@ -727,7 +727,8 @@ test('frame --at 多個時間：同時截、每張一行；任一個超過素材
 // ---------- srt-align 預設安靜 ----------
 test('srt-align：預設只印有標記的列和統計，--verbose 才印每一則；長片最多 30 列', () => {
   const p = mkProj('quiet');
-  const lines = Array.from({ length: 40 }, (_, i) => `這是第${i + 1}行講稿內容每一行都不太一樣${'甲乙丙丁戊己庚辛壬癸'[i % 10]}`);
+  // 一行連數字旁邊補的半形空格（086）也在 18 字以內：不會被拆，才是「沒有標記的列」
+  const lines = Array.from({ length: 40 }, (_, i) => `第${i + 1}行講稿內容每行不太一樣${'甲乙丙丁戊己庚辛壬癸'[i % 10]}`);
   fs.writeFileSync(path.join(p, '講稿.md'), lines.join('\n'));
   let t = 0;
   const words = [];
@@ -739,7 +740,7 @@ test('srt-align：預設只印有標記的列和統計，--verbose 才印每一�
   assert.match(q.stdout, /加 --verbose 看每一則/);
   assert.ok(q.stdout.length < 800, `預設太長：${q.stdout.length}`);
   const v = cli(['srt-align', '--dry-run', '--verbose'], 'quiet');
-  assert.match(v.stdout, /這是第17行講稿內容/);
+  assert.match(v.stdout, /第 17 行講稿內容/);
   assert.ok(v.stdout.length > q.stdout.length * 3);
 });
 

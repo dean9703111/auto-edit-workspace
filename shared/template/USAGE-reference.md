@@ -488,30 +488,33 @@ node shared/template/tools/build.mjs --project projects/<專案>
 
 使用者要「生成背景圖」、沒有給圖時才走這一節；有給圖就直接用 ffmpeg 縮放裁切成上面三種尺寸。
 
-**探測**：`node shared/template/tools/caps.mjs`（只檢查，不安裝、不登入、不下載）。它印一張「能力｜結果｜依據」表，最後一行是「可用的生圖路線」。工具不能用時，手動逐項跑：
+**探測**：`node shared/template/tools/caps.mjs`（只檢查，不安裝、不登入、不下載）。它印一張「能力｜結果｜依據」表，最後印「這次生圖走：<路線>」。工具不能用時，手動逐項跑：
 
 | 探測什麼 | Mac | Windows（PowerShell） | 算「可用」 |
 |---|---|---|---|
 | 模型本身能不能出圖 | 看這次 session 的工具清單 | 同左 | 清單裡有明確的圖片生成工具 |
 | Codex CLI | `command -v codex && codex login status` | `Get-Command codex -ErrorAction SilentlyContinue; codex login status` | 指令存在且已登入 |
 | MiniMax CLI | `command -v mmx && mmx auth status` | `Get-Command mmx -ErrorAction SilentlyContinue; mmx auth status` | 指令存在且已登入 |
+| Antigravity CLI | `command -v agy && agy --version` | `Get-Command agy -ErrorAction SilentlyContinue; agy --version` | 指令存在、印出版本號（登入狀態查不到） |
 | HTML 截圖 | `npx --no -- hyperframes browser path` | 同左 | 印出存在的 chrome-headless-shell 路徑 |
 | 縮放裁切 | `ffprobe -version` | 同左 | 有版本號 |
 
-**路由**（第一個可用的路；沒裝的不裝、沒登入的不幫使用者登入，直接走下一條，回報寫「登入之後可以改用生圖」）：
+**路由**：每個 Agent 走哪條路記在 `shared/setting.json` 的 `image`，沒寫的用下表的預設；`caps.mjs` 照它和這台能用的工具印「這次生圖走」。設定的那條不能用（沒裝、沒登入）就自動退到 HTML，HTML 也不行就只換主色、保留目前的背景；沒裝的不裝、沒登入的不幫使用者登入。
 
-| 模型／環境 | 第一選擇 | 第二選擇 | 最後退路 |
-|---|---|---|---|
-| Claude 系列（Claude Code） | Codex 生圖 | HTML／CSS／SVG → `brand.mjs bg` 截圖 | 只換主色，保留目前的背景 |
-| MiniMax 系列（MiniMax Code） | `mmx image generate` | HTML 路線 | 同上 |
-| GPT 系列（Codex CLI 裡） | 自己的生圖工具 | HTML 路線 | 同上 |
-| 其他模型 | 工具清單裡的生圖工具（有才用） | HTML 路線 | 同上 |
-| 要求精準留空、幾何線稿、和主色完全一致 | 直接走 HTML 路線 | — | — |
+| Agent | 預設 |
+|---|---|
+| Claude Code | HTML／CSS／SVG → `brand.mjs bg` 截圖 |
+| Codex | 自己的生圖工具 |
+| MiniMax Code | `mmx image generate` |
+| Antigravity | 自己的生圖工具 |
+| 其他 | 工具清單裡的生圖工具（沒有就 HTML） |
 
+- 換路線（使用者說了才換）：`node shared/template/tools/brand.mjs image <html｜native｜codex｜antigravity｜mmx>`；回到預設 `node shared/template/tools/brand.mjs image off`；看現在的設定 `node shared/template/tools/brand.mjs image`。Claude Code、Codex 工具自己認得出來，其他 Agent 加 `--agent minimax｜antigravity｜other`。
+- 要求精準留空、幾何線稿、和主色完全一致：直接走 HTML 路線。
 - HTML 路線：照 R9.4（`brand.mjs bg`，`fs`、`side`、`ch` 各跑一次）；輸出 `bg-<種類>.jpg`、疊上留空區框的 `zones-<種類>.jpg`，三張都在時產生並排的 `preview.jpg`。
 - 每條路的完整指令（Mac／Windows）在 `.agents/skills/auto-edit-style/references/image-routing.md`；有子代理工具就每張圖一個工人同時生成（同一資料夾的 `bg-worker.md`）。
 - 一律先存在暫存資料夾：尺寸（`ffprobe -v error -show_entries stream=width,height -of csv=p=0 <檔>`）要是 1920×1080、960×1080、1920×1080；留空區（R9.2）沒有裝飾；三張並排圖給使用者看（停點 ⑥），同意後才複製進 `shared/template/`。
-- 同一條路重做 2 次還不行就換下一條；全部不行就只換主色，告訴使用者原因。
+- 同一條路重做 2 次還不行就改走 HTML；HTML 也不行就只換主色，告訴使用者原因。
 
 ### R9.4 用 HTML 畫背景圖（沒有生圖工具時）
 

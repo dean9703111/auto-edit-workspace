@@ -19,7 +19,8 @@ const { pathsFrom } = await imp('build.mjs');
 
 // 假工作區：shared/template 是指回真的 template 的 symlink（從這裡執行工具＝經 symlink 執行）
 function fakeRoot(t) {
-  const root = tmpDir(t, 'ae-p2b-');
+  // realpath：macOS 的系統暫存 /var 是連到 /private/var 的連結，工具從 cwd 算出來的專案路徑是後者；不轉的話剪輯台會認不出「同一個專案」
+  const root = fs.realpathSync(tmpDir(t, 'ae-p2b-'));
   fs.mkdirSync(path.join(root, 'shared'), { recursive: true });
   fs.symlinkSync(TEMPLATE, path.join(root, 'shared', 'template'), 'dir');
   const project = path.join(root, 'projects', 'p2b');

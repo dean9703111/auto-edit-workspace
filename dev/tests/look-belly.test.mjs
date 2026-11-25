@@ -495,7 +495,7 @@ test('少姿勢模型：belly 0 完全不受影響；belly > 0 跑 run ✖ 並�
 
 const REAL = (!HAS_CHROME && '沒有 HyperFrames 的 Chrome') || (!fs.existsSync(DEMO) && '沒有示範口播') || (!HAS_FFMPEG && '沒有 ffmpeg');
 
-test('偵測：示範口播前 3 秒，姿勢每 3 格一筆、肩寬 70–95 px、四點都看得到；同一趟的臉部結果和不偵測姿勢時一模一樣', { skip: REAL, timeout: 180000 }, async () => {
+test('偵測：示範口播前 3 秒，姿勢每 3 格一筆、肩寬 140–185 px、四點都看得到；同一趟的臉部結果和不偵測姿勢時一模一樣', { skip: REAL, timeout: 180000 }, async () => {
   const { openDetector, detectLandmarks } = await imp('lib/landmarks.mjs');
   const clip = path.join(tmpDir(), 'clip.mp4'), vendorDir = path.join(TEMPLATE, 'vendor', 'mediapipe');
   assert.equal(spawnSync('ffmpeg', ['-y', '-v', 'error', '-i', DEMO, '-t', '3', '-c', 'copy', clip]).status, 0);
@@ -517,7 +517,7 @@ test('偵測：示範口播前 3 秒，姿勢每 3 格一筆、肩寬 70–95 px
   assert.ok(ok.length / both.poses.length >= 0.95, `姿勢偵測率 ${ok.length}/${both.poses.length}`);
   assert.deepEqual([ok[0].p.length, ok[0].v.length], [8, 4]);
   const sws = ok.map((s) => L.bellyGeom(s.p).sw).sort((a, b) => a - b), med = sws[sws.length >> 1];
-  assert.ok(med > 70 && med < 95, `肩寬中位數 ${med.toFixed(1)} px`);
+  assert.ok(med > 140 && med < 185, `肩寬中位數 ${med.toFixed(1)} px`);   // 2026-11-18 換的示範口播（854×480）：約 162 px
   assert.ok(ok.every((s) => Math.min(...s.v) >= 0.9), '示範口播（坐在桌子後面）四點的可見度都 ≥ 0.9');
   const s = L.poseSummary({ every: 3, frameCount: both.frameCount, source: { height: both.video.height }, samples: both.poses });
   assert.deepEqual([s.bellyOk, s.usable], [true, 1]);

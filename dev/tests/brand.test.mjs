@@ -267,9 +267,12 @@ test('風格包：工作區附的「預設」和現在的 shared/template/ 一�
   if (!(await needs(t, 'ffmpeg'))) return;
   const { listPacks, samePack } = await_styles;
   const packs = listPacks(TEMPLATE);
-  assert.deepEqual(packs.map((p) => p.dir), ['預設', '橘色-20261116-2', '藍圖']);
+  // 只認工作區一定有的兩包，不寫死完整清單（新增風格包不用改測試；和 build 測試同一個做法）
+  for (const name of ['預設', '藍圖']) assert.ok(packs.some((p) => p.dir === name), `少了「${name}」：${packs.map((p) => p.dir).join('、')}`);
+  assert.equal(packs[0].dir, '預設', '「預設」排第一');
   assert.ok(samePack(TEMPLATE, path.join(TEMPLATE, 'styles', '預設')), 'shared/template/ 的主色、外框、背景要和「預設」那包一樣（換過就 brand.mjs use 預設）');
-  for (const p of packs) assert.equal(p.files.length, 9, `${p.dir}：${p.files.join('、')}`);
+  // 內建的兩包亮暗都齊（9 個檔）；使用者自己存的包可以沒有暗色背景
+  for (const p of packs.filter((x) => ['預設', '藍圖'].includes(x.dir))) assert.equal(p.files.length, 9, `${p.dir}：${p.files.join('、')}`);
   for (const [f, w, h] of [['bg-fs', 1920, 1080], ['bg-side', 960, 1080], ['bg-ch', 1920, 1080]]) for (const s of ['', '-dark']) {
     const r = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', path.join(TEMPLATE, 'styles', '藍圖', `${f}${s}.jpg`)], { encoding: 'utf8' });
     assert.equal(r.stdout.trim(), `${w},${h}`, `${f}${s}.jpg`);

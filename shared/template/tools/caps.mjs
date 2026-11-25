@@ -2,24 +2,29 @@
 /**
  * 能力檢查：這台電腦能用哪些生圖與影片工具（只檢查，不安裝、不登入、不下載）
  *
- *   node shared/template/tools/caps.mjs [--json]
+ *   node shared/template/tools/caps.mjs [--agent <名稱>] [--json]
  *
  * 印一張表（能力｜結果｜依據），結果只有：可用、未登入、沒有安裝或壞掉、版本不符、工具判斷不了。
  *   模型內建生圖     工具判斷不了（看這次 session 的工具清單）
  *   codex            codex --version、codex login status
  *   mmx              mmx --version、mmx auth status（不印 API key 與餘額）
+ *   Antigravity      agy --version（有沒有登入查不到）
  *   HTML 截圖        npx --no -- hyperframes browser path（HyperFrames 的 Chrome）
  *   ffmpeg／ffprobe  -version
  *   HyperFrames      node_modules/hyperframes 的版本和 package.json 釘的版本比
- * 最後一行印可用的生圖路線（codex → mmx → HTML，只列可用的）。
- * 每個指令最多等 15 秒。結束碼：Chrome、ffmpeg／ffprobe、HyperFrames 都可用＝0，否則 1（codex、mmx 不影響）。
- * --json：只印一個 JSON（node、root、caps[]、imageRoutes）。
+ * 最後印「這次生圖走：<路線>」：照 shared/setting.json 的 image.<Agent>（沒寫用預設；lib/image-route.mjs），那條路這台不能用就退到 HTML。
+ *   現在是哪個 Agent：Claude Code、Codex 工具自己認得出來；認不出來就每個 Agent 各印一行，或加 --agent 只印自己那一行
+ *   --agent claude｜codex｜minimax｜antigravity｜other
+ *   要換路線：node shared/template/tools/brand.mjs image <路線>
+ * 每個指令最多等 15 秒。結束碼：Chrome、ffmpeg／ffprobe、HyperFrames 都可用＝0，否則 1（codex、mmx、Antigravity 不影響）。
+ * --json：只印一個 JSON（node、root、caps[]、imageRoutes＝這台能用的路線、agent、image[]＝每個 Agent 走哪條）。
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { isMain } from './lib/cli.mjs';
+import { isMain, splitFlag, valueOf } from './lib/cli.mjs';
+import { AGENTS, ROUTE_DOC, detectAgent, checkAgent, imageRoute, resolveImageRoute, routeLine } from './lib/image-route.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, '..', '..', '..');
@@ -63,7 +68,7 @@ export function versionLine(v) {
   return `HyperFrames ${v.installed}（package.json 釘 ${v.pinned}）`;
 }
 
-export function probeCaps({ root = ROOT, run = defaultRun, platform = process.platform } = {}) {
+export function probeCaps({ root = ROOT, run = defaultRun, platform = process.platform, env = process.env, agent = null } = {}) {
   const R = (cmd, args) => run(cmd, args, { platform });
   const caps = [{ id: 'model', name: '模型內建生圖', result: 'unknown', evidence: '看這次 session 的工具清單有沒有生圖工具' }];
   // codex
@@ -85,6 +90,11 @@ export function probeCaps({ root = ROOT, run = defaultRun, platform = process.pl
       const s = R('mmx', ['auth', 'status']);
       caps.push({ id: 'mmx', name: 'mmx', result: okRun(s) ? 'ok' : 'not-logged-in', evidence: `mmx --version：${redact(v.stdout)}；mmx auth status：${okRun(s) ? (redact(s.stdout) ? `已登入（${redact(s.stdout)}）` : '已登入') : first(s)}` });
     }
+  }
+  // Antigravity（agy）：沒有查登入狀態的指令，只看裝了沒
+  {
+    const v = R('agy', ['--version']);
+    caps.push({ id: 'antigravity', name: 'Antigravity（agy）', result: okRun(v) ? 'ok' : 'missing', evidence: `agy --version：${okRun(v) ? `${redact(v.stdout)}（有沒有登入查不到）` : first(v)}` });
   }
   // Chrome（HyperFrames 的 chrome-headless-shell）
   {
@@ -108,27 +118,43 @@ export function probeCaps({ root = ROOT, run = defaultRun, platform = process.pl
     caps.push({ id: 'hyperframes', name: 'HyperFrames', result, evidence, pinned: v.pinned, installed: v.installed });
   }
   const ok = (id) => caps.find((c) => c.id === id)?.result === 'ok';
-  const imageRoutes = ['codex', 'mmx'].filter(ok).concat(ok('chrome') ? ['html'] : []);
+  const imageRoutes = ['codex', 'mmx', 'antigravity'].filter(ok).concat(ok('chrome') ? ['html'] : []);
   const need = ['chrome', 'ffmpeg'].every(ok) && caps.find((c) => c.id === 'hyperframes').result !== 'missing';
-  return { node: process.versions.node, root, caps, imageRoutes, exitCode: need ? 0 : 1 };
+  // 這次生圖走哪條路：認得出 Agent（或 --agent 指定）就一行，認不出來每個 Agent 各一行
+  const who = agent || detectAgent(env);
+  const state = Object.fromEntries(['codex', 'mmx', 'antigravity', 'chrome'].map((id) => [id === 'chrome' ? 'html' : id, caps.find((c) => c.id === id).result]));
+  const image = (who ? [who] : Object.keys(AGENTS)).map((a) => resolveImageRoute(imageRoute(path.join(root, 'shared'), a), state));
+  return { node: process.versions.node, root, caps, imageRoutes, agent: who, image, exitCode: need ? 0 : 1 };
 }
 
 export function formatCaps(r) {
   const lines = [`Node ${r.node}（工作區 ${r.root}）`, '| 能力 | 結果 | 依據 |', '|---|---|---|'];
   for (const c of r.caps) lines.push(`| ${c.name} | ${ZH[c.result]} | ${c.evidence.replace(/\|/g, '／')} |`);
-  const names = { codex: 'codex', mmx: 'mmx', html: 'HTML' };
-  lines.push(r.imageRoutes.length ? `可用的生圖路線：${r.imageRoutes.map((x) => names[x]).join(' → ')}（換風格照 USAGE-reference.md R9.3 的路由表選第一個可用的）` : '可用的生圖路線：無 → 背景圖只能用使用者上傳的圖');
+  for (const x of r.image) if (x.problem) lines.push(`⚠ ${x.problem}`);
+  if (r.agent) lines.push(`這次生圖走：${routeLine(r.image[0])}`);
+  else {
+    lines.push(`認不出現在是哪個 Agent（工具只認得出 Claude Code、Codex），你是哪一個就走那一行（節＝${ROUTE_DOC} 的第幾節）：`);
+    for (const x of r.image) lines.push(`  ${AGENTS[x.agent]}：${routeLine(x, { brief: true })}`);
+    lines.push(`只印自己那一行：node shared/template/tools/caps.mjs --agent <${Object.keys(AGENTS).join('｜')}>`);
+  }
   return lines.join('\n');
 }
 
 if (isMain(import.meta.url)) {
-  const argv = process.argv.slice(2);
-  const bad = argv.find((a) => !['--json', '--help'].includes(a));   // 只有兩個開關、都不接值，不用 lib/cli.mjs 的切法
-  if (bad) { console.error(`✖ 沒有 ${bad} 這個參數（用 --help 看用法）`); process.exitCode = 1; }
-  else if (argv.includes('--help')) console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, ''));
+  const argv = process.argv.slice(2), o = {};
+  try {
+    for (let i = 0; i < argv.length; i++) {
+      const [k, inline] = String(argv[i]).startsWith('--') ? splitFlag(argv[i]) : [null];
+      if (k === 'agent') { [o.agent, i] = valueOf(argv, i, k, inline); checkAgent(o.agent); }
+      else if (k === 'json' || k === 'help') o[k] = true;
+      else throw new Error(`沒有 ${argv[i]} 這個參數`);
+    }
+  } catch (e) { console.error(`✖ ${e.message}（用 --help 看用法）`); process.exitCode = 1; o.bad = true; }
+  if (o.bad) { /* 上面印過了 */ }
+  else if (o.help) console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, ''));
   else {
-    const r = probeCaps();
-    if (argv.includes('--json')) { const { exitCode, ...j } = r; console.log(JSON.stringify(j, null, 2)); } else console.log(formatCaps(r));
+    const r = probeCaps({ agent: o.agent || null });
+    if (o.json) { const { exitCode, ...j } = r; console.log(JSON.stringify(j, null, 2)); } else console.log(formatCaps(r));
     process.exitCode = r.exitCode;
   }
 }

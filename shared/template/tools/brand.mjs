@@ -48,6 +48,12 @@
  * 錄影四周的底色（070；shared/setting.json 的 screenBg，這一集是 plan.json screenBg）：
  *   brand.mjs screen-bg [black|white|off]               純黑（預設）／純白；不給值＝印目前的預設
  *
+ * 生圖路線（087；shared/setting.json 的 image：每個 Agent 生成背景圖時走哪條路；lib/image-route.mjs）：
+ *   brand.mjs image                                     看每個 Agent 現在走哪條路、可選的路線
+ *   brand.mjs image <html|native|codex|antigravity|mmx> [--agent <名稱>]
+ *                                                       現在這個 Agent 以後走這條路（工具認不出是哪個 Agent 時加 --agent）
+ *   brand.mjs image off [--agent <名稱>]                回到預設
+ *
  * 背景圖（輸出都在暫存資料夾，不寫 shared/template/：使用者同意後才 pack --bg、use；auto-edit-style 步驟 2–4）：
  *   brand.mjs bg --tmp                                                    開一個暫存資料夾、印完整路徑
  *   brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]       HTML 路線：用 HyperFrames 的 Chrome 截成 bg-<kind>.jpg，
@@ -64,6 +70,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { listPacks, packsJs, samePack, copyIfDiff, templatePathOf, PACK_KIT, PACK_BG, STYLES_DIR, DEFAULT_PACK } from './lib/styles.mjs';
 import { readSpeaker, validateSpeaker, SPEAKER_FILE, SET_CMD } from './lib/speaker.mjs';
 import { readSettings, writeSetting } from './lib/settings.mjs';
+import { AGENTS, ROUTES, ROUTE_NOTES, IMAGE_CMD, detectAgent, checkAgent, imageRoute, saveImageRoute } from './lib/image-route.mjs';
 import { readEndingSetting, ENDING, BRAND_DIR, ENDING_MOTIONS, ENDING_MOTION, endingMotionZh } from './lib/ending.mjs';
 import { CAP_LOOKS, CAP_FONTS, CAP_SIZE, CAP_WEIGHTS, CAP_LIFT, CAP_DEFAULT, sanitizeCaptionStyle, resolveCaptionStyle, describeCaptionStyle } from './lib/caption-style.mjs';
 import { FRAME, sanitizeScreenFrame, resolveScreenFrame, describeScreenFrame, SCREEN_BGS } from './lib/screen-frame.mjs';
@@ -428,6 +435,15 @@ const BG_HELP = `換主色與背景圖（零依賴，只用 Node 22、ffmpeg 與
   node shared/template/tools/brand.mjs screen-bg [black|white|off]
       錄影、圖片段四周的底色（shared/setting.json 的 screenBg）：black＝純黑（預設）、white＝純白；不給值＝印目前的預設。
       有沒有錄影畫面框都套用（框裡沒蓋到的地方同色）；這一集不一樣：build.mjs --set screenBg=white。
+
+  node shared/template/tools/brand.mjs image
+      看每個 Agent 生成背景圖時走哪條路（shared/setting.json 的 image，沒寫的用預設）和可選的路線。
+  node shared/template/tools/brand.mjs image <html|native|codex|antigravity|mmx> [--agent <名稱>]
+      現在這個 Agent 以後生圖走這條路：html＝寫網頁＋SVG 截圖、native＝Agent 自己的生圖工具、codex／antigravity／mmx＝呼叫那個 CLI。
+      預設：Claude Code＝html、Codex＝native、MiniMax Code＝mmx、Antigravity＝native、其他＝native。那條路這台不能用時會自動退到 html。
+      Claude Code、Codex 工具自己認得出來；其他 Agent 加 --agent minimax｜antigravity｜other（也可以用它替別的 Agent 設定）。
+  node shared/template/tools/brand.mjs image off [--agent <名稱>]
+      回到預設。這台現在走哪條、能不能用：node shared/template/tools/caps.mjs
 
   背景圖（三張：fs 1920×1080、side 960×1080、ch 1920×1080；暗色是 bg-<kind>-dark.jpg）。輸出都先放暫存資料夾，
   不能在 shared/template/ 裡；使用者看過 preview.jpg 同意（停點 ⑥）後，用 pack --bg 存成風格包、use 套用，不要自己複製。
@@ -956,6 +972,42 @@ export function applyBrand(color, { kitDir = path.resolve(HERE, '..', 'kit'), fr
   return c;
 }
 
+// ---------- 生圖路線（087）----------
+
+const IMG_EX = 'node shared/template/tools/brand.mjs image codex';
+function imageCli(args) {
+  const o = { _: [] };
+  for (let i = 0; i < args.length; i++) {
+    if (!String(args[i]).startsWith('--')) { o._.push(args[i]); continue; }
+    const [k, inline] = splitFlag(args[i]);
+    if (k === 'kit' || k === 'agent') [o[k], i] = takeValue(args, i, k, inline, `例：${IMG_EX} --agent minimax`);
+    else if (k !== 'help') throw new Error(`brand.mjs image 沒有 --${k} 這個參數 → 例：${IMG_EX}`);
+  }
+  const kitDir = o.kit ? path.resolve(o.kit) : path.resolve(HERE, '..', 'kit');
+  const sharedDir = path.resolve(kitDir, '..', '..');
+  const fix = (fn) => { try { return fn(); } catch (e) { throw new Error(`${e.message} → 例：${IMG_EX}`); } };
+  const who = o.agent ? fix(() => checkAgent(o.agent)) : detectAgent();
+  const ids = Object.keys(AGENTS).join('｜');
+  if (!o._.length) {
+    console.log('生圖路線（生成背景圖時走哪條路；shared/setting.json 的 image，每個 Agent 各記一條）：');
+    for (const a of Object.keys(AGENTS)) {
+      const r = imageRoute(sharedDir, a);
+      console.log(`  ${a === who ? '▸' : ' '} ${AGENTS[a]}（${a}）：${ROUTES[r.route]}${r.from === 'setting' ? '' : '（預設）'}${r.problem ? `　⚠ ${r.problem}` : ''}`);
+    }
+    console.log('可選的路線：');
+    for (const [id, note] of Object.entries(ROUTE_NOTES)) console.log(`  ${id.padEnd(12)}${note}`);
+    console.log(`換路線：${IMAGE_CMD}（${who ? `現在這個 Agent 是 ${AGENTS[who]}` : `認不出現在是哪個 Agent，要加 --agent <${ids}>`}）；回到預設：node shared/template/tools/brand.mjs image off`);
+    console.log('這台現在走哪條、能不能用：node shared/template/tools/caps.mjs');
+    return 0;
+  }
+  if (o._.length > 1) throw new Error(`brand.mjs image 只收一個路線，現在是「${o._.join(' ')}」→ 例：${IMG_EX}`);
+  if (!who) throw new Error(`認不出現在是哪個 Agent → 加 --agent：node shared/template/tools/brand.mjs image ${o._[0]} --agent <${ids}>`);
+  const r = fix(() => saveImageRoute(sharedDir, who, o._[0]));
+  console.log(ok(`${AGENTS[who]} 以後生圖走：${ROUTES[r.route]}（${o._[0] === 'off' ? `拿掉 shared/setting.json 的 image.${who}，回到預設` : `shared/setting.json 的 image.${who}`}）`));
+  console.log('→ 這台現在能不能用這條路：node shared/template/tools/caps.mjs');
+  return 0;
+}
+
 async function cli() {
   const args = process.argv.slice(2);
   if (args[0] === 'bg') return bgCli(args.slice(1));
@@ -965,6 +1017,7 @@ async function cli() {
   if (args[0] === 'captions') return captionsCli(args.slice(1));
   if (args[0] === 'screen-frame') return screenFrameCli(args.slice(1));
   if (args[0] === 'screen-bg') return screenBgCli(args.slice(1));
+  if (args[0] === 'image') return imageCli(args.slice(1));
   let kitDir, frame = true, color = null;
   for (let i = 0; i < args.length; i++) {
     if (!String(args[i]).startsWith('--')) { color = args[i]; continue; }

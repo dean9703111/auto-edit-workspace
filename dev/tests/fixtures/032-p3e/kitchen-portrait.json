@@ -35,7 +35,8 @@
    "chInfo": {
     "cue": 2,
     "gap": 0.5,
-    "placement": "cover"
+    "placement": "cover",
+    "duration": 2.5
    },
    "end": 7,
    "planEnd": 7,
@@ -2298,7 +2299,8 @@
    "chInfo": {
     "cue": 2,
     "gap": 0.5,
-    "placement": "cover"
+    "placement": "cover",
+    "duration": 2.5
    },
    "end": 7,
    "planEnd": 7,

@@ -9,6 +9,7 @@
 //     "screenFrame": { "scale": "auto", "inset": 24 }                                 以後每集的錄影畫面框（brand.mjs screen-frame；lib/screen-frame.mjs；build 第一次照它寫進那一集的 plan.json）
 //     "tmp": { "dir": "/Volumes/auto-edit-tmp", "image": "….sparseimage" }            暫存資料夾改放別處（status.mjs --tmp；lib/tmp.mjs；沒寫＝系統暫存）
 //     "editor": { "seen": ["coach-final.v1"] }                                       剪輯台已經看過（關掉過）的提示卡，所有專案共用，不再跳（editor/server/hints.mjs）
+//     "image": { "claude": "codex" }                                                 每個 Agent 生成背景圖時走哪條路（brand.mjs image；lib/image-route.mjs；沒寫的用預設）
 //
 //   readSettings(sharedDir)             → { data, file, error }：檔案不在＝{}；不是合法 JSON＝error（data 是 {}）
 //   writeSetting(sharedDir, key, value) → file：只改這一個 key，其他設定留著；value 是 undefined 就拿掉；檔案壞了丟錯（不蓋掉使用者的檔）

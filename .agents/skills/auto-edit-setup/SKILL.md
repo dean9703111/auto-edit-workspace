@@ -75,7 +75,7 @@ node shared/template/tools/caps.mjs
 ```
 
 完成判準：能力表貼在總表下面。
-常見錯誤：結束碼 1（Chrome、ffmpeg／ffprobe、HyperFrames 有一項不可用）→ 回 S3／S6 補；codex、mmx 不可用不影響。
+常見錯誤：結束碼 1（Chrome、ffmpeg／ffprobe、HyperFrames 有一項不可用）→ 回 S3／S6 補；codex、mmx、Antigravity 不可用不影響。
 
 **5. 講者資料**（只讀）
 
