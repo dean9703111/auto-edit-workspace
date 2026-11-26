@@ -40,7 +40,8 @@ test('sceneSnippet：必填欄位、清單項數照下限、綁詞的 beats、01
   assert.equal(list.slots.visual, undefined, '選填不放');
   assert.deepEqual(JSON.parse(K.sceneSnippet(scene('07-key-point'))).beats, { keyAt: '#N@詞' });
   assert.equal(JSON.parse(K.sceneSnippet(scene('01-chapter'))).at, '#N');
-  for (const d of fs.readdirSync(path.join(TEMPLATE, 'scenes'))) assert.ok(JSON.parse(K.sceneSnippet(scene(d))).scene);
+  // 只看資料夾：Mac 的 Finder 開過會多一個 .DS_Store
+  for (const d of fs.readdirSync(path.join(TEMPLATE, 'scenes'), { withFileTypes: true }).filter((e) => e.isDirectory())) assert.ok(JSON.parse(K.sceneSnippet(scene(d.name))).scene);
 });
 
 test('真的文件：situationRows 行號對得上、四題與三條判準讀得到、拍型行號範圍對', () => {

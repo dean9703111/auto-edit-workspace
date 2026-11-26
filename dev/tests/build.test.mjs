@@ -497,7 +497,8 @@ test('--list 音效行：不列配樂、標附加與每集上限；另起一行�
   assert.ok(!line.includes('bgm-cylinder-five'));
   assert.match(line, /click（[^）]*，附加）/);
   assert.match(line, /thunder（[^）]*，每集 ≤ 3）/);
-  assert.match(r.stdout, /\n結尾配樂（plan\.json "outro"）：bgm-cylinder-five\n/);
+  // 本機曲庫（shared/music/，不進版控）有曲子的話會接在內建那一首後面
+  assert.match(r.stdout, /\n結尾配樂（plan\.json "outro"）：bgm-cylinder-five(、[^\n]+)?\n/);
 });
 
 test('check.textSync false：示意 plan（--plan 指到別處）不提醒；寫在專案正式的 work/hyperframes/plan.json 就 ⚠', async () => {
