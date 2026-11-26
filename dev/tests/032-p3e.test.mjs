@@ -155,7 +155,7 @@ function exampleHash() {
   const h = crypto.createHash('sha1');
   const add = (f) => { try { h.update(f); h.update(fs.readFileSync(path.join(EX, f))); } catch { h.update(`${f}:none`); } };
   for (const f of ['work/hyperframes/plan.json', 'work/rough.srt', 'work/transcript.json', 'work/cutpoints.json', 'work/main.json', '講稿.md']) add(f);
-  for (const d of ['work/hyperframes/compositions', 'work/designs']) { let names = []; try { names = fs.readdirSync(path.join(EX, d)).sort(); } catch { /* 沒有 */ } for (const n of names) add(`${d}/${n}`); }
+  for (const d of ['work/hyperframes/compositions', 'work/designs']) { let names = []; try { names = fs.readdirSync(path.join(EX, d)).filter((n) => !n.startsWith('capcut-')).sort(); } catch { /* 沒有 */ } for (const n of names) add(`${d}/${n}`); }   // capcut-*.html 是「輸出剪映素材」產生的，不是 --check 的輸入：有沒有做過剪映素材都算同一份
   try { const st = fs.statSync(path.join(EX, 'work', 'rough.mp4')); h.update(`rough.mp4:${st.size}`); } catch { h.update('rough.mp4:none'); }
   try { h.update(fs.readFileSync(path.join(WORKSPACE, 'shared', 'setting.json'))); } catch { h.update('setting:none'); }
   return h.digest('hex').slice(0, 16);

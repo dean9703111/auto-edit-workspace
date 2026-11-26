@@ -88,6 +88,7 @@ node shared/template/tools/editor.mjs --project projects/<專案>
 | scene 的 `slots`、fx 的 `vars`、模板動畫（`type: "custom"`＋`template`）的 `slots` | 文字值 | 改字（含清單項目的 `text`、QA 的 `{ "text", "at" }` 裡的 `text`；字數上限照情境的 `max`）；清單只能刪項目、不能加（剪輯台不顯示「新增一項」）；模板動畫只能改 `custom/<模板>.fill.json` 標成文字的欄位，圖示、時間、結構和項目數都不能動。改了字的段，按「更新預覽」時自動跑 `audit.mjs --only <那幾段>`，✖／⚠ 列在剪輯台檢查清單（`[段] 版面：…`） |
 | `work/feedback/editor-requests.md` | 修改單 | 「修改單」按「複製給 AI」時整份覆寫、只寫待改的段（剪貼簿只放一行指令「照剪輯台修改單改這 N 段（<這個檔>）：…」）：每段的 id、動畫是什麼、檔案（自訂動畫、錄影；路徑從工作區根目錄寫起，例 `projects/<專案>/work/hyperframes/compositions/x-….html`）、完成影片時間、plan.json 起訖、做法（動畫段才有：使用者沒勾「重新設計」＝在現有的動畫上改；勾了＝設計師照 `design.md` 從空白畫布重畫）、要改的標籤、描述、對應字幕（`#N 文字`）。使用者說「照修改單改」就照 `auto-edit-review` 流程 F 做 |
 | `work/feedback/learn.md` | 這集的調整紀錄 | 輸出過完成影片之後按「整理這集的調整給 AI」（`POST /api/learn`）時整份重寫，內容和 `node shared/template/tools/versions.mjs learn --project projects/<專案>` 一樣（回饋輪的原話與建議改規則、剪輯台手改、字幕常改的字、改版紀錄）；剪貼簿只放一行指令「照這集的調整紀錄學我的習慣（<這個檔>）：…」。使用者貼上這行就照 `auto-edit-review` 流程 G 做 |
+| `work/cover/cover.json`、`work/cover/request.md` | 封面台（頂列「做封面」，另開 `/cover`） | 使用者挑講者那一格（`at`）、改某一張的字會寫 `cover.json` 並重出那一張到 `output/cover/`；「複製封面指令」寫 `request.md` 和 `cover.json` 的 `request`（勾了哪些情境、描述、指定的標題）；「選這張」複製成 `output/cover/cover.jpg`。不動 plan.json、rough.srt |
 | `work/designs/<段>.md`、那段的動畫檔 | 句號 | 增刪字幕（分割、新增、合併、刪除）或改字時：拍點正本在 `work/designs/` 的段，鏡位腳本「講到」欄的 `#N` 和動畫檔 `P.at`／`P.sfx` 的句號照同一個操作重對，各自先備份 `<檔>.align-<時間>`（照 plan.json 產生的模板動畫不用，下次 build 會跟上）。復原、重做回到存檔前後的版本時，這些檔跟著換回去；存檔之後又被 AI 改過的檔不動，服務印 ⚠ 列出來 |
 | `type: "media"` 的段 | `from`／`to`／`in`／`anchor` | 使用者拖邊緣裁剪或整段移動：對到字幕邊界寫 `"#N"`／`"#Ne"` 並把 `anchor` 換成那句的開頭；沒對到寫秒數並拿掉 `anchor`；拖左緣時 `in` 跟著變（畫面內容不跑；有變速、定格的段改寫 `retime`／`hold`，每一區的速度不變）；寫了 `to` 就拿掉 `duration` |
 | | `speed`／`hold`／`retime`／`in`／`out` | 畫面速度（屬性的「畫面速度」）。整段同速寫 `in`＋`speed`（0.5–4）；整段定格寫 `hold`；分區或超過 4 倍寫 `retime`（`at` 是 `+秒`，時間沒動的點留原本的寫法，例 `#21@詞`）；互斥的欄位自動拿掉，`out` 只會被拿掉。你寫的 `retime` 也會顯示在這裡，使用者看得到、改得了 |
@@ -216,7 +217,7 @@ node shared/template/tools/editor.mjs --project projects/<專案>
 ### 畫面
 
 ```
-┌ 上方：專案｜存檔狀態｜流程列｜下一步｜復原 重做｜輸出 修改單｜?（說明）───────────────────┐
+┌ 上方：專案｜存檔狀態｜流程列｜下一步｜復原 重做｜輸出 做封面 修改單｜?（說明）───────────────────┐
 ├ 完成影片預覽／快速試聽｜更新預覽｜安全框 講者框 全螢幕          │ 屬性｜段落｜字幕｜修改單｜檢查 │
 │ 預覽畫面＋音量表                                                │                                │
 │ 播放控制、時間（分:秒）、現在這段、入點／出點                    │                                │

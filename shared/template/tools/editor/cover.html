@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>封面台</title>
+<link rel="icon" href="/editor/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/kit/fonts.css">
+<link rel="stylesheet" href="/kit/brand.css">
+<link rel="stylesheet" href="/editor/editor.css">
+<style>
+  body.cover { display: block; height: auto; min-height: 100vh; overflow: auto; }
+  body.cover .topbar { position: sticky; top: 0; z-index: 20; }
+  .cv-main { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 16px; padding: 16px; align-items: start; }
+  .cv-panel { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; min-width: 0; }
+  .cv-side { display: grid; gap: 18px; }
+  .cv-side h2, .cv-card h3 { margin: 0; font-size: 15px; }
+  .cv-side h2 span { font-family: var(--mono); font-size: 12px; color: var(--accent-text); margin-right: 6px; }
+  .cv-hint { margin: 4px 0 8px; font-size: 13px; color: var(--mute); }
+  .cv-hint code { font-family: var(--mono); font-size: 12px; background: var(--plate); padding: 0 4px; border-radius: 3px; }
+  .cv-cands { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .cv-cand { padding: 0; border: 2px solid transparent; border-radius: 6px; overflow: hidden; background: var(--card); min-height: 0; line-height: 0; position: relative; }
+  .cv-cand img { width: 100%; display: block; }
+  .cv-cand span { position: absolute; left: 4px; bottom: 4px; padding: 0 5px; border-radius: 4px; background: rgba(0,0,0,.66); font: 11px/1.6 var(--mono); }
+  .cv-cand[aria-pressed="true"] { border-color: var(--accent); }
+  .cv-scene { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 8px; align-items: center; margin-bottom: 10px; }
+  .cv-scene input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+  .cv-scene label { font-weight: 700; }
+  .cv-scene textarea { grid-column: 1 / -1; width: 100%; font-size: 13px; }
+  .cv-scene.off textarea { opacity: .5; }
+  .cv-side input[type="text"], .cv-side textarea { width: 100%; }
+  #copy { width: 100%; min-height: 40px; font-size: 15px; }
+  #status { margin: 8px 0 0; font-size: 13px; color: var(--mute); }
+  #status.err { color: var(--warn-kw); }
+  #promptBox { margin-top: 8px; font-size: 13px; color: var(--mute); }
+  #promptBox textarea { width: 100%; margin-top: 6px; font-size: 12px; font-family: var(--mono); }
+  .cv-list { display: grid; gap: 16px; min-width: 0; }
+  .cv-card { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr); gap: 14px; align-items: start; }
+  .cv-card.portrait { grid-template-columns: minmax(180px, 280px) minmax(0, 1fr); }
+  .cv-card.picked { border-color: var(--accent); }
+  .cv-head { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 10px; }
+  .cv-head small { color: var(--mute); font-size: 13px; }
+  .cv-tag { margin-left: auto; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent-text); }
+  .cv-shot { border-radius: 6px; overflow: hidden; background: #000; border: 1px solid var(--line); aspect-ratio: 16 / 9; display: grid; place-items: center; position: relative; }
+  .cv-card.portrait .cv-shot { aspect-ratio: 9 / 16; }
+  .cv-shot img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .cv-shot.busy::after { content: "出圖中…"; position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.6); font-weight: 700; }
+  .cv-empty { padding: 20px; text-align: center; color: var(--mute); font-size: 13px; }
+  .cv-form { display: grid; gap: 8px; min-width: 0; }
+  .cv-form label { display: grid; gap: 2px; font-size: 12px; color: var(--mute); }
+  .cv-form input { width: 100%; font-size: 14px; }
+  .cv-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .cv-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 4px; }
+  .cv-msg { font-size: 13px; color: var(--mute); white-space: pre-line; }
+  .cv-msg.err { color: var(--warn-kw); }
+  .cv-blocked { padding: 40px 16px; text-align: center; color: var(--mute); }
+  @media (max-width: 900px) { .cv-main, .cv-card, .cv-card.portrait { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body class="cover">
+<header class="topbar">
+  <div class="brandmark">
+    <span class="logo" aria-hidden="true">封</span>
+    <div class="titles">
+      <h1>封面台</h1>
+      <div class="sub" id="projName">載入中…</div>
+    </div>
+  </div>
+  <div class="save-state" id="saveState" data-state="busy" role="status"><span class="dot"></span><span class="txt">載入中…</span></div>
+</header>
+
+<main class="cv-main" id="main" hidden>
+  <aside class="cv-panel cv-side">
+    <section aria-labelledby="h1">
+      <h2 id="h1"><span>01</span>講者的表情</h2>
+      <p class="cv-hint">「去背＋內容」那一張用這一格。點一格就換。</p>
+      <div class="cv-cands" id="cands"></div>
+    </section>
+    <section aria-labelledby="h2">
+      <h2 id="h2"><span>02</span>三個情境</h2>
+      <p class="cv-hint">勾起來的各出一張讓你挑。描述可以改，AI 會照著做。</p>
+      <div id="scenes"></div>
+    </section>
+    <section aria-labelledby="h3">
+      <h2 id="h3"><span>03</span>標題（選填）</h2>
+      <input type="text" id="title" maxlength="120" placeholder="留空：AI 照影片內容，每一張各想一組">
+      <p class="cv-hint"><code>|</code> 換行，<code>*詞*</code> 套主色底。例：<code>*自動剪片*|只要出一張嘴</code></p>
+    </section>
+    <section>
+      <button id="copy" class="primary">複製封面指令</button>
+      <p id="status" role="status" aria-live="polite">複製指令貼給 AI，勾起來的情境各出一張。</p>
+      <details id="promptBox" hidden><summary>指令與儲存位置</summary><p id="savedTo"></p><textarea id="prompt" readonly rows="8" aria-label="已儲存的封面指令"></textarea></details>
+    </section>
+  </aside>
+  <div class="cv-list" id="list"></div>
+</main>
+<div class="cv-blocked" id="blocked" hidden></div>
+
+<script type="module" src="/editor/cover.js"></script>
+</body>
+</html>

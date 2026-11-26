@@ -3801,6 +3801,7 @@ async function playFinalVideo() {
 }
 $('#exportVideo').addEventListener('click', playFinalVideo);
 $('#exportSheet').addEventListener('click', () => { if (app.finalLinks?.sheet) window.open(app.finalLinks.sheet, '_blank', 'noopener'); });
+$('#btnCover').addEventListener('click', () => window.open('/cover', '_blank', 'noopener'));   // 封面台（090）：另開一頁，不影響這一頁沒存的修改
 $('#exportLearn').addEventListener('click', () => learnCopy());
 $('#modeNote').addEventListener('click', (e) => { if (e.target.closest('[data-learn]')) { learnCopy(); return; } if (e.target.closest('[data-play-final]')) { e.preventDefault(); playFinalVideo(); } });
 for (const sel of ['#logIssues', '#exportIssues']) $(sel).addEventListener('click', (e) => {

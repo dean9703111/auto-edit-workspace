@@ -247,13 +247,14 @@ test('生圖狀態：AI 明確回報開始、失敗與完成；缺圖不能完�
   assert.equal((await post('/api/design/request/status', { requestId: next.request.id, state: 'generating' })).status, 409, '換色後不能繼續更新舊需求');
 });
 
-test('同頁 UI：拖拉圖片驗證與儲存、鍵盤選檔、複製提示詞、選擇方案與套用；手機不溢出', { timeout: 90000 }, async (t) => {
+test('同頁 UI：拖拉圖片驗證與儲存、鍵盤選檔、複製提示詞、選擇方案與套用；手機不溢出', { timeout: 240000 }, async (t) => {
   const chrome = await hasChrome(); if (!chrome) { t.skip('沒有現有 Chrome'); return; }
   const { default: puppeteer } = await import('puppeteer-core');
   const browser = await puppeteer.launch({ executablePath: chrome, headless: true });
   try {
     await browser.defaultBrowserContext().overridePermissions(new URL(editor.url).origin, ['clipboard-read', 'clipboard-write', 'clipboard-sanitized-write']);
     const page = await browser.newPage(), errors = []; page.on('pageerror', (e) => errors.push(e.message));
+    page.setDefaultTimeout(60000);   // 整套一起跑時預覽的動畫載得慢，預設 30 秒等不到
     let uploads = 0;
     page.on('request', (req) => { if (new URL(req.url()).pathname === '/api/design/upload' && req.method() === 'POST') uploads++; });
     await page.setViewport({ width: 1440, height: 1000 }); await page.goto(new URL('/framing', editor.url).href); await page.evaluate(() => { document.querySelector('#designWrap').open = true; });
@@ -275,7 +276,9 @@ test('同頁 UI：拖拉圖片驗證與儲存、鍵盤選檔、複製提示詞�
     await motion.waitForFunction(() => gsap.globalTimeline.getChildren(false, false, true).some((t) => t.paused() && Math.abs(t.time() - (t.duration() - 1.8)) < .01));
     await page.click('[data-category="all"]');
     await page.$eval('#brandHex', (el) => { el.value = '#2678DD'; el.dispatchEvent(new Event('change')); });
-    await page.waitForFunction(() => window.designWorkbench.dirty && !window.designWorkbench.busy);
+    // 換色處理完的那個「還沒套用」狀態只有大約 1 秒（構圖頁停手 1 秒就自動套用）：機器忙的時候等不到。
+    // 改等穩定的結果——不在處理中，而且頁面上的主色已經換成新的（不管自動套用了沒）
+    await page.waitForFunction(() => !window.designWorkbench.busy && document.querySelector('#brandColor').value.toLowerCase() === '#2678dd');
     const zone = 'label[for="referenceUpload"]';
     const file = { name: '拖拉參考圖.png', type: 'image/png', data: fs.readFileSync(image).toString('base64') };
     assert.equal((await dragFiles(page, zone, 'dragenter', [file])).highlighted, true);

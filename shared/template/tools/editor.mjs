@@ -59,6 +59,7 @@ import { requestsInfo, doRequestsStatus, doRequests, requestsList, doRequestsLis
 import { roundInfo, startUse } from './editor/server/rounds.mjs';
 import { writeLearn } from './lib/learn.mjs';
 import { designState, designAsset, designPreviews, setDesignColor, uploadDesign, prepareDesignRequest, importDesignCandidate, restoreOriginalBackground, candidateAsset, applyDesign, discardDesign, removeReference, designRequestStatus, setDesignRequestStatus } from './editor/server/design.mjs';
+import { coverState, prepareCoverRequest, setCoverOptions, editCover, pickCoverChoice, coverAsset } from './editor/server/cover.mjs';
 import { r3 } from './lib/time.mjs';
 import { LOUD } from './lib/audio.mjs';
 import { LOCAL_ROLES, localSfxDir, wavSeconds } from './lib/sfx-local.mjs';
@@ -1275,6 +1276,12 @@ async function handle(ctx, req, res) {
         return result ? sendJson(res, 200, result) : sendJson(res, 404, { message: '找不到這個操作' });
       } catch (e) { return sendJson(res, e.status || 400, { message: e.message }); }
     }
+    if (p.startsWith('/api/cover/')) {
+      try {
+        const result = p === '/api/cover/request' ? prepareCoverRequest(ctx, body) : p === '/api/cover/options' ? setCoverOptions(ctx, body) : p === '/api/cover/edit' ? editCover(ctx, body) : p === '/api/cover/pick' ? pickCoverChoice(ctx, body) : null;
+        return result ? sendJson(res, 200, result) : sendJson(res, 404, { message: '找不到這個操作' });
+      } catch (e) { return sendJson(res, e.status || 400, { message: e.message }); }
+    }
     if (exportBusy(ctx) && ['/api/save', '/api/restore', '/api/build', '/api/framing/save', '/api/framing/update'].includes(p)) {
       const out = { error: 'exporting', message: '正在輸出完成影片，等它跑完再存檔或更新預覽（也可以先取消輸出）' };
       if (p === '/api/save' && isObj(body) && stashUnsaved(ctx, body, 'exporting')) out.stashed = true;
@@ -1366,6 +1373,9 @@ async function handle(ctx, req, res) {
   if (p === '/api/design/request/status') return sendJson(res, 200, designRequestStatus(ctx));
   if (p === '/framing' || p === '/framing.html') return sendFile(req, res, path.join(UI_DIR, 'framing.html'));
   if (p === '/cuts' || p === '/cuts.html') return sendFile(req, res, path.join(UI_DIR, 'cuts.html'));
+  if (p === '/cover' || p === '/cover.html') return sendFile(req, res, path.join(UI_DIR, 'cover.html'));
+  if (p === '/api/cover') return sendJson(res, 200, coverState(ctx));
+  if (p.startsWith('/cover/file/')) { const f = coverAsset(ctx, p.slice('/cover/file/'.length)); return f ? sendFile(req, res, f) : sendText(res, 404, '找不到這張圖'); }
   if (p === '/api/cuts') return sendJson(res, 200, cutsState(ctx));
   if (p === '/storyboard' || p === '/storyboard.html') return sendFile(req, res, path.join(UI_DIR, 'storyboard.html'));
   if (p === '/api/storyboard') return sendJson(res, 200, storyboardState(ctx));
