@@ -53,6 +53,14 @@ function mediaUse(seg, item) {
   return `${use}${marks.length ? `（${marks.join('、')}）` : ''}`;
 }
 
+// 「畫面文字」那一行的欄位名稱：只留名稱本身。規格裡的說明（括號）和例字的「」拿掉：
+//   那一行的「」只能是畫面上的字——網頁把每一組「」變成可以改的格子、套回時照「」的順序對欄位（089：x-point 的小標說明帶了三個例字，套回時被當成多了三則文字）
+export function lineLabel(label) {
+  let s = String(label ?? ''), prev;
+  do { prev = s; s = s.replace(/（[^（）]*）/g, ''); } while (s !== prev);
+  return s.replace(/[「」]/g, '').trim() || String(label ?? '').replace(/[「」]/g, '');
+}
+
 export function textFields(seg, { scenes = [], specs = new Map() } = {}) {
   const out = [];
   if (seg?.type === 'media') return out;
@@ -146,7 +154,7 @@ export function renderSection(seg, ctx) {
   L.push(`- 起點那句字幕：${c ? c.text : '—'}`);
   L.push(`- 版面：${layoutOf(item)}（${cardLabel(seg, item)}）`);
   const fields = textFields(seg, { scenes, specs });
-  if (fields.length) L.push(`- 畫面文字：${fields.map((f) => `${f.label}「${quote(f.value)}」`).join('；')}`);
+  if (fields.length) L.push(`- 畫面文字：${fields.map((f) => `${lineLabel(f.label)}「${quote(f.value)}」`).join('；')}`);
   if (seg.type === 'media' && seg.src) L.push(`- 素材：\`${seg.src}\`${mediaUse(seg, item)}`);
   L.push(`- 音效：${sfxText(seg)}`);
   const design = seg.design ? designs.get(seg.id) : null;
@@ -365,7 +373,13 @@ export function applyStoryboard(md, plan, { scenes = [], specs = new Map() } = {
     const text = item('畫面文字');
     if (text) {
       const fields = textFields(seg, { scenes, specs });
-      const now = [...String(text.value).matchAll(/「([^」]*)」/g)].map((m) => m[1]);
+      let now = [...String(text.value).matchAll(/「([^」]*)」/g)].map((m) => m[1]);
+      // 089 之前產生的分鏡表：欄位名稱自己帶「」例字，照每個欄位名稱裡有幾組跳過，剩下的才是畫面上的字
+      const skip = fields.map((f) => (String(f.label).match(/「[^」]*」/g) || []).length);
+      if (now.length !== fields.length && now.length === fields.length + skip.reduce((a, b) => a + b, 0)) {
+        let k = 0;
+        now = fields.map((f, i) => { k += skip[i]; return now[k++]; });
+      }
       if (now.length !== fields.length) unmatched.push(`${seg.id}：畫面文字有 ${now.length} 則，plan.json 有 ${fields.length} 個欄位 → 這段請 AI 照分鏡表手動改`);
       else {
         fields.forEach((f, i) => {

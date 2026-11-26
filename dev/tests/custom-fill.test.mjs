@@ -318,3 +318,46 @@ test('056 portraitMax：清單項數、文字字數、清單每項欄位；直�
     assert.ok(byPlan.warnings.some((x) => x.includes('直式最多 2 項')), 'format 不給就看 plan.format');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+// ---------- 089：同一拍的幾項 ----------
+// 在 Node 裡直接跑填好的模板 <script>：P 是記錄器（每個呼叫記 [方法, 選擇器, 時間]），P.at 照表回時間；不需要瀏覽器
+function runFilled(html, at) {
+  const script = html.slice(html.lastIndexOf('<script>') + 8, html.lastIndexOf('</script>'));   // 檔頭的說明裡也有「<script>」這個字，取最後一個
+  const calls = [];
+  const selOf = (s) => (Array.isArray(s) ? s.map((e) => e.sel).join(',') : s);
+  const timeOf = (ref, off = 0) => { if (!(ref in at)) throw new Error(`測試沒給 ${ref} 的時間`); return at[ref] + off; };
+  const P = { portrait: false, V2: { EASE: { in: 'in' } }, prev: () => 'fullscreen', at: timeOf, sfx: (name, ref, off) => timeOf(ref, off) };
+  for (const n of ['in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type', 'swap', 'axis', 'focus', 'grow', 'wipe', 'pop', 'chars', 'spot', 'end']) {
+    P[n] = (a, b, c) => { calls.push(n === 'spot' ? [n, selOf(b), c] : [n, selOf(a), b]); return P; };
+  }
+  const rows = (html.match(/class="xchk-row/g) || []).length;
+  const document = { getElementById: () => ({}), querySelectorAll: (sel) => (/\.xchk-row$/.test(sel) ? Array.from({ length: rows }, () => ({ sel })) : [{ sel }]) };
+  new Function('gsap', 'SceneMotion', 'document', 'window', script)({ timeline: () => ({}) }, () => P, document, { __timelines: {} });
+  const r3 = (n) => Math.round(n * 1000) / 1000;
+  const when = (fn, tail) => calls.filter(([f, s]) => f === fn && typeof s === 'string' && s.endsWith(tail)).map(([, , t]) => r3(t));
+  return { calls, when };
+}
+
+test('089 x-checklist：同一拍的幾項（綁同一個詞）一項一項寫出來，後一項晚 0.5 秒；各綁各的照原本的時間；3 項、2 項一樣跑得起來', () => {
+  const s = F.readFillSpec(CUSTOM, 'x-checklist');
+  const fill = (ats) => {
+    const r = F.fillTemplate({ spec: s, html: read('x-checklist'), id: 'x9', slots: { title: '四個檢核點', items: ats.map((at, i) => ({ text: `第 ${i + 1} 項`, at })) }, icons, kitDir });
+    assert.deepEqual(r.errors, []);
+    return r.html;
+  };
+  const AT = { '#26': 5, '#27': 8, '#28': 11, '#29': 14 };
+  // 後三項同一拍（合併草稿的「拍距不足（併拍）」會把相鄰太近的兩項綁成同一個詞）：字、打勾、計數、焦點都一項一項來
+  const m = runFilled(fill(['#26', '#27', '#27', '#27']), AT);
+  for (const [tail, want] of [['-t1', [5]], ['-t2', [8]], ['-t3', [8.5]], ['-t4', [9]]]) assert.deepEqual(m.when('chars', tail), want, `第 ${tail} 項的字`);
+  assert.deepEqual(m.calls.filter(([f]) => f === 'count').map(([, , t]) => t), [5.3, 8.3, 8.8, 9.3], '計數一格一格加，不同時');
+  assert.deepEqual(m.calls.filter(([f, sel]) => f === 'spot' && sel).map(([, , t]) => t), [5, 8, 8.5, 9], '焦點一列一列換（同時換三次 P.spot 會丟錯，整段停在初始畫面）');
+  const all = m.calls.find(([f, sel]) => f === 'spot' && sel == null)[2];
+  assert.equal(all, 10.5, '收尾照舊＝最後一項綁的詞 +2.5 秒');
+  assert.ok(all >= 9 + 0.9, '最後一項寫完（0.9 秒）才收');
+  // 各綁各的：時間一秒都不動
+  const d = runFilled(fill(['#26', '#27', '#28', '#29']), AT);
+  assert.deepEqual(['-t1', '-t2', '-t3', '-t4'].map((t) => d.when('chars', t)[0]), [5, 8, 11, 14]);
+  // 3 項、2 項：刪掉的那幾項不留下沒定義的變數
+  assert.deepEqual(['-t1', '-t2', '-t3'].map((t) => runFilled(fill(['#26', '#27', '#27']), AT).when('chars', t)[0]), [5, 8, 8.5]);
+  assert.deepEqual(['-t1', '-t2'].map((t) => runFilled(fill(['#26', '#26']), AT).when('chars', t)[0]), [5, 5.5]);
+});

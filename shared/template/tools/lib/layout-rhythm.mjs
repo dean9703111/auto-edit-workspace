@@ -5,7 +5,7 @@
 // 這份是純函式：--check（lib/plan.mjs）、--outline、--map（lib/flow.mjs、lib/semantic-map.mjs）都用它，數字只有這一份。
 //
 //   modeOfHead(head)                      → 規格那一條第一行（.spec.md）是哪一種版面：card｜half｜pip｜full｜null
-//   modeOfLayout(layout, key)             → --check 的 items[].layout（overlay｜side｜pip｜full）換成 card｜half｜pip｜null（章節幕不算）
+//   modeOfLayout(layout, key)             → --check 的 items[].layout（overlay｜side｜pip｜full）換成 card｜half｜pip｜null（章節幕、章節角標不算）
 //   layoutRuns(segs)                      → 連續同一種版面的區塊 [{ mode, start, end, ids }]（segs＝[{ id, start, end, mode }]，mode 是 null 的不算）
 //   layoutFindings(segs, { voice })       → 違反三條規則的地方 [{ rule, ids, start, end, secs, msg, fix }]；voice＝只有聲音的區間（那裡本來就沒有講者，不算）
 //                                           秒數比較留 TOL 秒容差；segs 帶了 from／to（大綱的句號）時，fix 寫可以照抄的改法（延哪一段的 to、併哪幾段）
@@ -32,7 +32,8 @@ export function modeOfHead(head) {
   return null;
 }
 
-export const modeOfLayout = (layout, key = '') => (key === 'chapter' ? null : layout === 'overlay' ? 'card' : layout === 'side' ? 'half' : layout === 'pip' || layout === 'full' ? 'pip' : null);
+// 章節角標（02）不算一種版面：它是疊在別段上面的角落小標，可以和別段重疊（089：放在子母畫面中間，被當成「切回字卡」把子母畫面切成兩塊）
+export const modeOfLayout = (layout, key = '') => (key === 'chapter' || key === 'chapter-tag' ? null : layout === 'overlay' ? 'card' : layout === 'side' ? 'half' : layout === 'pip' || layout === 'full' ? 'pip' : null);
 
 export function layoutRuns(segs, { join = RHYTHM.join } = {}) {
   const runs = [];
@@ -118,7 +119,7 @@ export function planLayout(rows, { startOf, secsOf, modesOf, R = RHYTHM } = {}) 
     const merged = [];
     while (j < n) {
       if (can(j)) { merged.push(...pend); pend = []; pendSecs = 0; end = j; j++; }
-      else if (pendSecs + info[j].d <= R.absorb + 1e-6) { pend.push(j); pendSecs += info[j].d; j++; }
+      else if (pendSecs + info[j].d <= R.absorb + TOL) { pend.push(j); pendSecs += info[j].d; j++; }   // 089：和別條一樣留 TOL 秒（10.3 秒的一行讓整支片排不出子母畫面）
       else break;
     }
     const span = info.slice(k, end + 1).reduce((s, x) => s + x.d, 0);

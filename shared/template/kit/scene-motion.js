@@ -1227,10 +1227,11 @@
       items.forEach(function (el) {
         var g = el.querySelector(':scope > [data-sc-spot]');
         if (!g && glow) { g = mk(el, 'sc-spot'); g.setAttribute('data-sc-spot', ''); el.appendChild(g); relPos(el); }
-        var cur = spotState.get(el) || { s: 1, y: 0, g: 0, d: 0, t: -1, t0: -1 }, a = at;
+        var cur = spotState.get(el) || { s: 1, y: 0, g: 0, d: 0, t: -1, t0: -1, req: -1 }, a = at;
         if (a < cur.t - 0.001) {
-          if (a < cur.t0 - 0.001) throw new Error('P.spot 要照時間先後寫：' + nameOf(el) + ' 在 ' + r3(cur.t0) + 's 已經有焦點變化，這一行是 ' + r3(a) + 's');
-          a = cur.t;   // 上一個焦點還在轉場（兩拍太近）：接在它後面，不丟錯（丟錯整段會停在空白的初始畫面）
+          // 順序寫反才丟錯：比上一行「寫的時間」（req）還早。同一拍連著點名好幾個（時間一樣，上一個已經被往後接過）不算
+          if (a < cur.req - 0.001) throw new Error('P.spot 要照時間先後寫：' + nameOf(el) + ' 在 ' + r3(cur.req) + 's 已經有焦點變化，這一行是 ' + r3(a) + 's');
+          a = cur.t;   // 上一個焦點還在轉場（兩拍太近、同一拍好幾個）：接在它後面，不丟錯（丟錯整段會停在空白的初始畫面）
         }
         var tg = el === act ? { o: 1, s: S, y: lift, g: glow ? 1 : 0, d: 0 }
           : done.indexOf(el) >= 0 ? { o: 0.92, s: 1, y: 0, g: 0, d: 1 }
@@ -1238,7 +1239,7 @@
         // 亮度從那一刻的亮度開始（被 P.dim、tl.to 壓暗過的不會先跳回 1；只有 spot 動過時＝上一拍的目標）
         mv([el], a, { opacity: opAt(el, a), scale: cur.s, y: cur.y }, { opacity: tg.o, scale: tg.s, y: tg.y }, dur, 'power3.out', 0);
         if (g) mv([g], a, { opacity: cur.g }, { opacity: tg.g }, dur * 0.8, 'sine.inOut', 0);
-        tg.t0 = a; tg.t = a + dur; spotState.set(el, tg);
+        tg.t0 = a; tg.t = a + dur; tg.req = at; spotState.set(el, tg);
       });
       return P;
     };

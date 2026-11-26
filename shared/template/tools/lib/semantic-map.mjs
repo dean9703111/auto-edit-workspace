@@ -97,6 +97,7 @@ export function specKeys(first, specNames = []) {
 
 // 字卡動態的候選（025）：這一行的語意適合的幾張（catalog 的 sem），照「同一種語意第幾次出現」輪流給 2 張，整集不會都是同幾張
 // fx＝[{ id, zh, sem }]（已經照版式篩過）；回傳 (row) → 'fx 05 動態堆疊｜fx 23 文字方塊' 或 ''
+const BRIDGE = 'x-point';     // 子母畫面中間的一兩句話（重點、提醒、轉折、小結）：前後都是全畫面的動畫時用它，不用切回講者
 export const FX_ROW_MAX = 8;   // 字卡動態是短的：超過 8 秒的行不推薦（一張卡 3–6 秒）
 export function fxPicker(fx = [], per = 2) {
   const bySem = new Map(), seen = new Map();
@@ -183,7 +184,9 @@ export function mapOptions(rows, sitRows = [], specNames = [], { secsOf = null, 
     const fxTail = fxs ? `；只有一個詞或一句短話就用字卡動態：${fxs}` : '';
     // 子母畫面區塊裡，重點、轉場這種本來用字卡的行：併進前一段，不切回講者（切回去又切進來，畫面會晃）
     if (mode === 'pip' && (plan[ri].merge || r.tier === 'C' || semFirst !== 'pip')) {
-      return `${head}：併進前一段（前一段的 to 寫到這一行結尾；這一行講到的重點詞可以綁成前一段的最後一拍），子母畫面中間不切回講者${opts.length ? `；要單獨成段就用：${opts.join('｜')}` : ''}${tail}`;
+      // 089：這個語意沒有全畫面的模板（例：「其他」只有字卡）也能單獨成段：x-point 就是給子母畫面中間的一兩句話用的，放得下就列出來
+      const alone = opts.length || !specNames.includes(BRIDGE) || (secs != null && need(BRIDGE) > secs + 0.05) ? opts : [(() => { const h = [...hints].find(([k]) => k.endsWith(`|${BRIDGE}`))?.[1]; return h ? `${BRIDGE}（${h}）` : BRIDGE; })()];
+      return `${head}：併進前一段（前一段的 to 寫到這一行結尾；這一行講到的重點詞可以綁成前一段的最後一拍），子母畫面中間不切回講者${alone.length ? `；要單獨成段就用：${alone.join('｜')}` : ''}${tail}`;
     }
     if (r.tier === 'C') return `${head}：串場用最便宜的（${fxs ? `字卡動態 ${fxs}` : '字卡動態：`--spec fx` 看有哪幾張'}；或 12 keywords；或併進前後那一行。同一張字卡動態一集最多用 2 次）${opts.length ? `；這一型的列：${opts.join('｜')}` : ''}${tail}`;
     const none = mode === 'card' && !short.length ? '用下方字卡（07 key-point、06 concept、12 keywords）或字卡動態' : mode === 'pip' ? '這一行太短，全畫面的模板放不下 → 併進前後那一行（同一個子母畫面區塊裡的段）' : short.length ? '這一行太短，這一型的模板都放不下 → 併進前後那一行，或用字卡動態' : '這一型的模板這個版式都不能用 → 照共用.md 第 3 節的替換表換全畫面';

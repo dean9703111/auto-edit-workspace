@@ -893,7 +893,8 @@ test('範例的 13 列（F4 回饋表）：--check 全部 ✖', async () => {
     ['s21', 'items[0]'], ['s21', 'items[1]'], ['s22', 'fx vars.text'], ['s23', 'items[0]'], ['s24', 'fx vars.text']];
   for (const [id, f] of rows) assert.ok(res.errors.some((e) => e.startsWith(`文字對時：${id} 的 ${f}「`)), `${id} ${f} 沒有 ✖`);
   assert.ok(res.errors.includes('文字對時：s07 的 key「放到電腦才看得出」在 0:28.84 出現，「到電腦」0:34.84（#20）才講到 → beats.keyAt 寫 "#20@到電腦"'));
-  assert.ok(res.errors.includes('文字對時：s22 的 fx vars.text「1 小時」在 2:08.78 出現，「一個小時」2:12.87（#64）才講到 → from 寫 "#64@一個小時"'), '中文數字＝阿拉伯數字');
+  // 089：把 from 挪到 #64 這張字卡動態只剩 1 秒（to 是 #63e）→ 不叫人挪 from，改叫人換字或延 to
+  assert.ok(res.errors.includes('文字對時：s22 的 fx vars.text「1 小時」在 2:08.78 出現，「一個小時」2:12.87（#64）才講到 → 卡上的字換成這段前半句講到的詞，或 to 也往後延（from 挪到「一個小時」這張卡只剩 1s，字卡動態至少 2.5s）'), '中文數字＝阿拉伯數字');
 });
 
 test('v2 轉場（design-system §5）：txIn／txOut 分類；換卡不換景（舊的幕多留 0.3 s、z＋1、只留內容區往左擦掉）；章節幕斜擦、不加色塊；--check 報 items[].out.tx 與「轉場：」一行', async () => {
@@ -1224,4 +1225,14 @@ test('055 k15（054 C18）：連續 3 張以上圖片快切（每張 ≤ 2.5 秒
   assert.deepEqual(ws(runM(pdir, [img('m1', 'a', '#3', '#3+1.5'), img('m2', 'b', '#3+1.5', '#3+3')])), []);
   assert.deepEqual(ws(runM(pdir, ['a', 'b', 'c'].map((n, i) => img(`m${i + 1}`, n, `#3+${i * 3}`, `#3+${(i + 1) * 3}`)))), []);
   fs.rmSync(pdir, { recursive: true });
+});
+
+test('089 字卡動態太短：段長不到 2.5 秒 ⚠（只會閃一下），2.5 秒以上不報', () => {
+  const res = run([
+    { id: 'f1', type: 'fx', fx: 29, from: '#2+1.8', to: '#2e', vars: { number: '18', label: '字' } },   // 1.2 秒
+    { id: 'f2', type: 'fx', fx: 29, from: '#6', to: '#6e', vars: { number: '3' } },                    // 3 秒
+  ]);
+  const w = res.warnings.filter((x) => /字卡動態至少/.test(x));
+  assert.equal(w.length, 1, res.warnings.join('\n'));
+  assert.match(w[0], /^\[f1 fx 29[^\]]*\] 段長 1\.2s，字卡動態至少 2\.5s（只會閃一下，字來不及看）→ to 往後延到至少 0:\d\d\.\d\d；是 from 為了對到卡上的字才往後挪的，就把卡上的字換成這段前半句講到的詞$/);
 });

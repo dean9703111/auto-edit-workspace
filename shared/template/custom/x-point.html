@@ -100,6 +100,11 @@
     const FS = Math.max(KMIN, Math.min(KMAX, Math.floor(fit / 4) * 4));
     KEY.style.fontSize = FS + 'px';
     KEY.style.lineHeight = 2 * Math.round(FS * (P.portrait ? 0.575 : 0.6)) + 'px';   // 行高取偶數：上下置中後的邊才落在整數像素
+    // 寬度取偶數：字裡有英數字時寬度帶小數，卡內左右置中算出來的 left 會落在半像素（圖示圓、小標膠囊的直邊會糊）。先小標、再文字欄
+    const even = (el) => { if (!el) return; const c = getComputedStyle(el); let w = parseFloat(c.width); if (!(w > 0)) return;
+      if (c.boxSizing !== 'border-box') w += parseFloat(c.paddingLeft) + parseFloat(c.paddingRight) + parseFloat(c.borderLeftWidth) + parseFloat(c.borderRightWidth);
+      el.style.boxSizing = 'border-box'; el.style.width = 2 * Math.ceil(w / 2 - 0.01) + 'px'; };
+    even($q('#xpt-tag')[0]); even($q('#xpt-text')[0]);
     if (!P.portrait) { const R = P.region('panelTop'); CARD.style.top = Math.round(R[1] + R[3] / 2 - CARD.offsetHeight / 2) + 'px'; }
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 圖示彈出、小標淡入（先看得到這句話是哪一類）

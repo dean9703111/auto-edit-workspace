@@ -334,3 +334,24 @@ test('055 k15 whip：連續圖片快切第二張起寫 "enter": "whip"（原本 
   assert.deepEqual(only.plan.scenes.map((s) => s.enter ?? null), ['cut', 'cut', 'whip', 'fade']);
   fs.rmSync(pdir, { recursive: true });
 });
+
+test('089 字卡動態：文字對時要把 from 往後挪、挪完剩不到 2.5 秒（只會閃一下）→ 不挪，✖ 留著讓人改卡上的字；挪完還夠長的照挪', () => {
+  // 卡上的字在這段最後才講到（#4 的後半句）：挪過去只剩 1 秒多
+  const late = P([
+    { id: 's01', scene: 'concept', from: '#2', to: '#3', slots: { text: '剪輯工作流程' } },
+    { type: 'fx', fx: 27, id: 'f1', from: '#3', to: '#4e', vars: { text: '專案資料夾', alt: 'FOLDER' } },
+  ]);
+  const r = fix(late);
+  assert.ok(has(r.before.errors, /^文字對時：f1 的 fx vars\.text/), r.before.errors.join('\n'));
+  assert.equal(seg(r.plan, 'f1').from, '#3', '不挪');
+  assert.equal(seg(r.plan, 's01').to, '#3');
+  assert.ok(has(r.result.errors, /^文字對時：f1 的 fx vars\.text「專案資料夾」[^→]*→ 卡上的字換成這段前半句講到的詞，或 to 也往後延（from 挪到「專案資料」這張卡只剩 [\d.]+s，字卡動態至少 2\.5s）$/), `✖ 還在，而且直接說要改字：${r.result.errors.join('｜')}`);
+  assert.ok(!has(r.result.warnings, /字卡動態至少/), '沒有被縮短');
+  // 同一張卡、段尾延到下一句：挪完還有 2.5 秒以上，照挪
+  const roomy = structuredClone(late);
+  seg(roomy, 'f1').to = '#5e';
+  const k = fix(roomy);
+  assert.match(seg(k.plan, 'f1').from, /^#4@專案資料/);
+  assert.equal(seg(k.plan, 's01').to, seg(k.plan, 'f1').from, '前一段的 to 一起改');
+  assert.ok(!has(k.result.warnings, /字卡動態至少/));
+});

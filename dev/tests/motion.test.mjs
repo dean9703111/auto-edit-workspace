@@ -404,7 +404,21 @@ test('P.spot：上一個焦點還在轉場就接到下一拍 → 接在它後面
   P.end(4);
   seek(tl, 2.5, true); assert.ok(g[1].opacity < 0.5, `b 在 2.5 還是暗的，實際 ${g[1].opacity}`);
   seek(tl, 3.5, true); near(g[1].opacity, 1); near(g[0].opacity, 0.42);
-  assert.throws(() => P.spot(g, g[0], 1), /P\.spot 要照時間先後寫：#a 在 2\.5s/);
+  assert.throws(() => P.spot(g, g[0], 1), /P\.spot 要照時間先後寫：#a 在 2\.3s/);   // 訊息寫的是上一行「寫的時間」，不是被往後接之後的時間
+});
+
+test('P.spot（089）：同一拍連著點名三個（合併草稿把相鄰太近的幾項綁成同一個詞）→ 一個接一個、不丟錯；之後比那一拍早才丟錯', () => {
+  const { tl, P } = mk(); const g = [ITEM('a'), ITEM('b'), ITEM('c'), ITEM('d')];
+  P.spot(g, g[0], 1);
+  P.spot(g, g[1], 4);                       // 4–4.5
+  P.spot(g, g[2], 4);                       // 同一拍第 2 個 → 4.5–5
+  P.spot(g, g[3], 4);                       // 同一拍第 3 個 → 5–5.5（089 之前在這一行丟錯，整段停在初始畫面）
+  P.spot(g, g[3], 4.2);                     // 比上一行寫的時間晚一點、但還在轉場裡 → 也是接在後面
+  P.end(8);
+  seek(tl, 4.4, true); assert.ok(g[1].opacity > 0.9 && g[2].opacity < 0.5, `4.4 秒焦點在 b，實際 b ${g[1].opacity}、c ${g[2].opacity}`);
+  seek(tl, 4.95, true); assert.ok(g[2].opacity > 0.9 && g[3].opacity < 0.5, `4.95 秒焦點在 c，實際 c ${g[2].opacity}、d ${g[3].opacity}`);
+  seek(tl, 7, true); near(g[3].opacity, 1); near(g[2].opacity, 0.42); near(g[1].opacity, 0.42);
+  assert.throws(() => P.spot(g, g[0], 3), /P\.spot 要照時間先後寫：#a 在 4\.2s 已經有焦點變化，這一行是 3s/);
 });
 
 test('P.rack：active 清楚、其他模糊＋稍淡（filter，不動 opacity）；只在拍點變、清楚時 none；亂序 seek 一致；接在轉場後面、倒著寫丟錯', () => {
