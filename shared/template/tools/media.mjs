@@ -62,11 +62,18 @@
  *   node shared/template/tools/media.mjs shorts --project projects/<長片專案> --pick "#12-#25" --name <新專案名稱>
  *       第二步：把那一段從 work/rough.mp4 切出來、裁成 9:16（水平置中在講者身上，照 plan.json 的 speakerBox；沒有就取畫面中間）、放大到 1080×1920，
  *       開成 projects/<新專案名稱>/（assets/camera/ 一支直的影片＋講稿.md）。不動原本的專案；名稱已經存在就停下來。之後照一般的直式流程剪新專案。
- *   node shared/template/tools/media.mjs cover --project projects/<專案> --title "第一行|第二行" [--kicker "小標"] [--at <秒>]
- *       封面圖：從 work/rough.mp4 抓一格講者（--at；不寫就先用前段的一格），去背後排成三種版型（a 人物跳出、b 色塊分割、c 底部標題），
- *       寫到 output/cover/cover-a.jpg、-b.jpg、-c.jpg 給使用者挑。橫式專案 1920×1080；直式專案 1080×1920，標題和臉都在中間 3:4 裡。
- *       --title 最多 3 行、一行最多 9 個字寬（| 換行，*詞* 是要強調的詞，會套主色底）；--kicker 是標題上面的小標（集數、系列名）。
- *       同時寫 work/cover/candidates.jpg（8 格候選，挑表情用）。去背模型沒下載時照樣出圖，只是講者沒有白邊。
+ *   node shared/template/tools/media.mjs cover --project projects/<專案> [--only cutout,mock,icon] [--at <秒>] [--title "第一行|*強調詞*" [--kicker "小標"]]
+ *       封面圖：照 work/cover/cover.json 的內容排版出圖，一個情境一張，寫到 output/cover/cover-<情境>.jpg 給使用者挑。
+ *       三個情境：cutout 去背＋內容（講者去背站前面，後面一張內容）、mock 情境模擬（警示框／對話／前後對照／一張圖）、icon 大塊圖示（圖示／圖庫／一張圖）。
+ *       橫式專案 1920×1080（左標題、右主視覺、底部重點）；直式專案 1080×1920，標題和主視覺都在中間 3:4 裡。封面上不放頻道名、講者名。
+ *       cover.json 怎麼寫：跑下面的 --brief，或在封面台（剪輯台的「做封面」，網址後面加 /cover）按「複製封面指令」，印的那一段就是完整的寫法。
+ *       --title：把「去背＋內容」那一張的標題寫進 cover.json 再出圖，還沒有 cover.json 時用它最快出第一張（最多 3 行、一行最多 9 個字寬；| 換行，*詞* 套主色底）；--kicker 是標題上面的小字。
+ *       --at：講者用哪一秒那一格（候選在 work/cover/candidates.jpg）；--only：只重出這幾張。去背模型沒下載時照樣出圖，只是講者沒有去背。
+ *   node shared/template/tools/media.mjs cover --project projects/<專案> --brief [--title "第一行|*強調詞*"]
+ *       印出做封面的完整指令（三個情境各一張、cover.json 的寫法與上限、生圖走哪條路、出圖指令），照它做；和封面台「複製封面指令」是同一段。
+ *       使用者在封面台改過情境的描述、取消過情境，這裡照用；--title 是使用者指定的標題（每一張都用它）。
+ *   node shared/template/tools/media.mjs cover --project projects/<專案> --pick <cutout|mock|icon>
+ *       選定一張：複製成 output/cover/cover.jpg。
  *   node shared/template/tools/media.mjs matte-setup
  *       下載人物去背模型（u2net_human_seg，約 170 MB，只下載一次；放在使用者家目錄的 .cache/hyperframes/）。用到講者去背的模板動畫（x-wall 這類，
  *       填資料規格寫 "matte": true）時 build 會說要先跑這條；跑之前先問使用者。不用 --project。已經下載過就只印 ✓。
@@ -168,7 +175,7 @@ export { ALIGN, scriptLines, displayText, alignSeq, alignLines, CONNECTIVE, brea
 export { readIllusList, illusShow, illusLint } from './lib/rough/illus.mjs';
 
 const VALUE_FLAGS = ['project', 'template', 'src', 'at', 'box', 'order', 'below', 'edit', 'margin', 'v1', 'max', 'file', 'wait', 'said', 'say', 'transcript', 'format', 'only', 'name', 'every', 'pick', 'title', 'kicker', 'keep', 'cut', 'as', 'opts', 'states'];
-const BOOL_FLAGS = ['all', 'grid', 'help', 'dry-run', 'remap-plan', 'no-sheet', 'write-plan', 'again', 'skip-stop', 'no-editor', 'retranscribe', 'verbose', 'apply'];
+const BOOL_FLAGS = ['all', 'grid', 'help', 'dry-run', 'remap-plan', 'no-sheet', 'write-plan', 'again', 'skip-stop', 'no-editor', 'retranscribe', 'verbose', 'apply', 'brief'];
 // 這兩個指令的第一個參數不用旗標：media.mjs new <名稱>、media.mjs illus-show <元件>
 const POSITIONAL = ['new', 'illus-show'];
 
@@ -230,7 +237,10 @@ async function cli() {
   if (flags.cmd === 'cut-check') { cutCheck(P); return 0; }
   if (flags.cmd === 'cover') {
     const { findChrome } = await import('./lib/audit-browser.mjs');
-    (await import('./lib/cover.mjs')).makeCovers({ project: P.project, templateDir: P.templateDir, root: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..'), title: flags.title, kicker: flags.kicker || '', at: flags.at ?? null, format: flags.format || null, chrome: findChrome() });
+    const CV = await import('./lib/cover.mjs'), root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+    if (flags.brief) { console.log(CV.coverBrief({ project: P.project, templateDir: P.templateDir, root, title: flags.title ?? null })); return 0; }
+    if (flags.pick) { console.log(`✓ 選定 ${CV.COVER.names[flags.pick] || flags.pick}：${path.relative(root, CV.pickCover(P.project, flags.pick)).split(path.sep).join('/')}`); return 0; }
+    CV.makeCovers({ project: P.project, templateDir: P.templateDir, root, set: { title: flags.title ?? null, kicker: flags.kicker ?? null, at: flags.at ?? null }, only: flags.only ? String(flags.only).split(',').map((x) => x.trim()).filter(Boolean) : null, format: flags.format || null, chrome: findChrome() });
     return 0;
   }
   if (flags.cmd === 'shorts') {

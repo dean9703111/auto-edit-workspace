@@ -687,7 +687,7 @@ test('025 cut-check：剪接點兩邊都還在講話 → mid；一邊安靜 → 
   assert.ok(r.speech > -20 && r.speech < -5, String(r.speech));
 });
 
-test('025 cover：標題解析與字寬、字級放得進框、講者框對位、三種版型的 HTML、標題太長會擋', async () => {
+test('025 cover：標題解析與字寬、字級放得進框、講者框對位、標題太長會擋（版面與情境在 cover.test）', async () => {
   const CV = await import(new URL('../../shared/template/tools/lib/cover.mjs', import.meta.url));
   const lines = CV.parseTitle('讓 AI 幫你|*剪片*');
   assert.deepEqual(lines, [[{ t: '讓 AI 幫你', hi: false }], [{ t: '剪片', hi: true }]]);
@@ -699,16 +699,6 @@ test('025 cover：標題解析與字寬、字級放得進框、講者框對位�
   const pl = CV.place({ CW: 1920, CH: 1080, ar: 16 / 9, NW: 1920, NH: 1080, box: [600, 100, 1000, 1000], tx: 1000, ty: 60, zoom: 1.5 });
   assert.ok(Math.abs(pl.left + 800 / 1920 * pl.width - 1000) < 1 && pl.left <= 0 && pl.left + pl.width >= 1920 && pl.top <= 0 && pl.top + pl.height >= 1080);
   assert.equal(CV.place({ CW: 1920, CH: 1080, ar: 16 / 9, NW: 1920, NH: 1080, box: [0, 0, 200, 900], tx: 1400, zoom: 1.2 }).left, 0, '推不到的就貼邊，不露出畫面外');
-  for (const format of ['landscape', 'portrait']) for (const layout of CV.COVER.layouts) {
-    const html = CV.coverHtml({ layout, format, title: '讓 AI 幫你|*剪片*', kicker: 'EP 12', frame: 'frame.jpg', cutout: 'cutout.png', speakerBox: [300, 100, 800, 1000], kit: 'file:///kit' });
-    assert.match(html, new RegExp(`width: ${format === 'portrait' ? 1080 : 1920}px; height: ${format === 'portrait' ? 1920 : 1080}px`));
-    assert.match(html, /<em>剪片<\/em>/);
-    assert.match(html, /class="kicker">EP 12</);
-    assert.equal(/class="cut"/.test(html.split('</style>')[1]), layout !== 'c', '底部標題那一張不疊去背層');
-    const m = html.match(/\.text \{ position: absolute; left: (\d+)px; top: (\d+)px; width: (\d+)px; height: (\d+)px/);
-    if (format === 'portrait') assert.ok(+m[2] >= 240 && +m[2] + +m[4] <= 1680, `直式的標題在中間 3:4 裡（${m[2]}–${+m[2] + +m[4]}）`);
-    if (format === 'landscape' && layout !== 'c') assert.ok(+m[1] > 900, '講者在左 → 標題放右邊');
-  }
   assert.deepEqual(CV.titleProblems('讓 AI 幫你|*剪片*'), []);
   assert.match(CV.titleProblems('')[0], /沒有標題 → /);
   assert.match(CV.titleProblems('一|二|三|四')[0], /最多 3 行 → /);

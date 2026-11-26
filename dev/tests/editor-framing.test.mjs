@@ -48,7 +48,7 @@ before(async () => {
   editor = await startEditor({ flags: { project, template: TEMPLATE }, cwd: root, port: 0, writeState: false, previewDir });
 });
 
-test('構圖下方直接預覽動畫：未儲存的框即時更新，橫直式版型與唯讀路由', { timeout: 90000 }, async (t) => {
+test('構圖下方直接預覽動畫：未儲存的框即時更新，橫直式版型與唯讀路由', { timeout: 150000 }, async (t) => {
   const chrome = await hasChrome();
   if (!chrome) { t.skip('找不到現有 Chrome'); return; }
   const original = fs.readFileSync(planFile, 'utf8');
@@ -57,11 +57,17 @@ test('構圖下方直接預覽動畫：未儲存的框即時更新，橫直式�
   try {
     const page = await browser.newPage();
     let oldBackend = true;
+    // 頁面停手 1 秒就自動存檔。這一段要驗的是「還沒存，預覽就跟著變」：存檔的請求先扣著，驗完才放行
+    // （不扣的話，機器忙的時候存檔會搶在檢查前面，plan.json 先被寫進去）
+    let holdSave = true;
+    const heldSaves = [];
     const pageErrors = [];
     page.on('pageerror', (e) => pageErrors.push(e.message));
     await page.setRequestInterception(true);
     page.on('request', (req) => {
-      if (oldBackend && new URL(req.url()).pathname === '/api/design') req.respond({ status: 404, contentType: 'text/plain; charset=utf-8', body: '找不到這個頁面' });
+      const p = new URL(req.url()).pathname;
+      if (oldBackend && p === '/api/design') req.respond({ status: 404, contentType: 'text/plain; charset=utf-8', body: '找不到這個頁面' });
+      else if (holdSave && p === '/api/framing/save') heldSaves.push(req);
       else req.continue();
     });
     await page.setViewport({ width: 1440, height: 1000 });
@@ -80,8 +86,10 @@ test('構圖下方直接預覽動畫：未儲存的框即時更新，橫直式�
     const preview = await page.$('#designPreviews iframe[src*="03-side-panel"]');
     await preview.scrollIntoView();
     const demo = await preview.contentFrame();
-    await demo.waitForFunction(() => document.querySelector('#footage img')?.src.startsWith('data:image/jpeg;base64,'));
+    await demo.waitForFunction(() => document.querySelector('#footage img')?.src.startsWith('data:image/jpeg;base64,'), { timeout: 60000 });   // 整套一起跑時頁面載得慢
     assert.equal(fs.readFileSync(planFile, 'utf8'), original, '即時預覽不儲存構圖');
+    holdSave = false;
+    for (const r of heldSaves) r.continue();
     const count = (await browser.pages()).length;
     await page.click('#designPreviews .design-preview-stage button');
     await page.waitForSelector('#designDialog[open]');

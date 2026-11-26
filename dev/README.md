@@ -4,7 +4,7 @@
 
 | 路徑 | 用途 | 怎麼跑（在工作區根目錄） |
 |---|---|---|
-| `tests/` | `shared/template/tools/` 的單元與整合測試（build、剪輯台、插入素材、audit、qc…） | 整套：`npm test`（＝`node --test --test-timeout=300000 "dev/tests/*.test.mjs"`；要 Node 22、ffmpeg；瀏覽器測試要先 `npx hyperframes browser ensure`，沒有 Chrome、ffmpeg 或 puppeteer-core 就自動略過） |
+| `tests/` | `shared/template/tools/` 的單元與整合測試（build、剪輯台、插入素材、audit、qc…） | 整套：`npm test`（＝`node --test --test-concurrency=5 --test-timeout=300000 "dev/tests/*.test.mjs"`；同時只跑 5 個檔：每個瀏覽器測試各開一個 Chrome，全開會把機器塞滿、等待逾時；要 Node 22、ffmpeg；瀏覽器測試要先 `npx hyperframes browser ensure`，沒有 Chrome、ffmpeg 或 puppeteer-core 就自動略過） |
 | `npm run test:fast` | 不用 ffmpeg、Chrome、`node_modules` 的那一批（docs、install-skills、foundation、032-w5 和 plan、scenes、editor-storyboard 等單元測試）；`.github/workflows/check.yml` 在 push、pull request 時用 Ubuntu 與 Windows 跑的就是這一批，官網（`pages.yml`）要它過了才部署 | `npm run test:fast`（清單在 `package.json` 的 `scripts`；新增不碰 ffmpeg／Chrome 的測試檔就加進去） |
 | `tests/docs.test.mjs` | 文件一致性：9 支 Skill 的骨架、六個停點的原文、門檻數字找得到出處（AGENTS.md、style.md、USAGE*.md、工具 `--help`）、文件寫到的檔案存在、G04 八項矛盾 | `npm run test:docs`（＝`node --test dev/tests/docs.test.mjs`；零依賴；約 1 秒） |
 | `tests/docs-allow.json` | docs.test 的數字白名單：每筆 `{ "file", "text", "reason" }`，上限 40 筆；能搬進 style.md 或 AGENTS.md 的就不要加 | 改完重跑 docs.test |

@@ -219,10 +219,11 @@ test('時間軸：長片打開一屏三分鐘，從清單跳到一段會放大�
   const T = () => page.evaluate(() => { const t = window.__editor.timeline; return { span: t.span(), scale: t.scale, totalH: t.totalH }; });
   const t0 = await T();
   assert.ok(t0.span <= 181, `一屏最多三分鐘，現在 ${t0.span}`);
-  await page.evaluate(() => { const t = window.__editor.timeline; t.dur = 1000; t.fitPps = (t.cssW - 20) / 1000; t.pps = t.fitPps; t.t0 = 0; t.reveal(500, 505); });
-  const t1 = await T();
+  // 這裡把時間軸的長度暫時改成 1000 秒來試。跳過去和量結果要在同一次執行裡做：分成兩次，中間頁面自己的更新（重新對長度、重排）插進來，
+  // 量到的就不是剛跳完的樣子（機器忙的時候才遇得到）
+  const t1 = await page.evaluate(() => { const t = window.__editor.timeline; t.dur = 1000; t.fitPps = (t.cssW - 20) / 1000; t.pps = t.fitPps; t.t0 = 0; t.reveal(500, 505); return { span: t.span(), inView: t.t0 < 500 && t.t0 + t.span() > 505 }; });
   assert.ok(t1.span <= 61, `跳到一段：放大到前後約 30 秒（${t1.span}）`);
-  assert.ok(await page.evaluate(() => { const t = window.__editor.timeline; return t.t0 < 500 && t.t0 + t.span() > 505; }), '那一段在畫面裡');
+  assert.ok(t1.inView, '那一段在畫面裡');
   await page.evaluate((d) => { const t = window.__editor.timeline; t.setDuration(d); t.fit(); }, await page.evaluate(() => window.__editor.dur));
   // 分隔線
   const box = await (await page.$('#tlResize')).boundingBox();

@@ -110,10 +110,13 @@ test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態�
     // 029：勾了「重新設計」的段寫進修改單，複製的那一行寫明這幾段派設計師從空白重畫
     assert.equal(await page.$eval('#rqTop [data-rq="redo"]', (el) => el.checked), false, '預設不勾');
     await page.click('#rqTop [data-rq="redo"]');
-    await page.click('[data-rq="tab"][data-tab="pend"]');
+    // 修改單每次存檔回來會整塊重畫一次。page.click 是「先找到元素、再算位置、再點」，中間剛好被重畫換掉就會丟
+    // 「Node is either not clickable or not an Element」（機器忙的時候才遇得到）。剛改完內容就要點的地方，在頁面裡一次找到就點
+    const tap = (sel) => page.$eval(sel, (el) => el.click());
+    await tap('[data-rq="tab"][data-tab="pend"]');
     await page.waitForSelector('.rq-item .chip-redo');
     assert.equal(await page.evaluate(() => localStorage.getItem('editor-requests-tab')), 'pend', '記住上次看的分頁');
-    await page.click('[data-rq="copy"]');
+    await tap('[data-rq="copy"]');
     await page.waitForFunction(() => /其中 1 段要重新設計（s01）：這幾段派設計師照 design\.md 從空白畫布重畫；其他段在現有的動畫上改。/.test(window.copiedRequest || ''));
     assert.match(fs.readFileSync(path.join(work, 'feedback/editor-requests.md'), 'utf8'), /## 1\. s01[\s\S]*- 做法：重新設計（使用者勾的）[\s\S]*## 2\. s02[\s\S]*- 做法：在現有的動畫上改/);
     // 剪貼簿失敗時，存檔成功也不能宣稱已複製。
@@ -121,7 +124,7 @@ test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態�
       navigator.clipboard.writeText = async () => { throw new Error('clipboard denied'); };
       document.execCommand = () => false;
     });
-    await page.click('[data-rq="copy"]');
+    await tap('[data-rq="copy"]');
     await page.waitForFunction(() => [...document.querySelectorAll('.rq-sent')].every((el) => el.textContent === '已存檔'));
     // 072：另一個沒存過東西的瀏覽器（無痕）打開，修改單一樣；在那邊寫的草稿，原本的分頁幾秒內也看得到（不會被舊分頁蓋掉）
     const other = await browser.createBrowserContext(), p2 = await other.newPage();

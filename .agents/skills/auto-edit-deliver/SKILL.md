@@ -20,7 +20,7 @@ version: 0.2.0
 |---|---|
 | 停點紀錄 ④ 沒有「通過」，使用者也沒說要輸出 | 改用 `auto-edit-review` |
 | 使用者只要剪映素材（不要 final.mp4） | 只做步驟 2 |
-| 使用者要封面圖（「做封面」「做縮圖」） | 照 `references/cover.md`（`media.mjs cover`：一個標題出三張給他挑）；沒要求就不做 |
+| 使用者要封面圖（「做封面」「做縮圖」） | 照 `references/cover.md`（`media.mjs cover`：三個情境各出一張給他挑，改字和選定在封面台）；沒要求就不做 |
 
 ## 步驟
 
