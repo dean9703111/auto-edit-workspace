@@ -23,8 +23,8 @@ const { parseSrt } = await imp('lib/srt.mjs');
 const { timeMap } = await imp('lib/edit.mjs');
 const { canvasOf } = await imp('lib/canvas.mjs');
 const L0 = await lib();
-// 工作區預設的底樂（shared/setting.json，每台機器不一樣）不算：快照才不會跟著機器變
-const L = { ...L0, musicDefault: null };
+// 工作區預設的底樂（shared/setting.json）、本機曲庫的配樂（shared/music/，不進版控，有 scope 的那幾首）每台機器不一樣，不算：快照才不會跟著機器變
+const L = { ...L0, musicDefault: null, sfx: Object.fromEntries(Object.entries(L0.sfx).filter(([, e]) => !e?.scope)) };
 
 // ---------- 快照：轉成 JSON 時把 undefined、函式、Set、Map、陣列上多掛的欄位都留下來（JSON.stringify 會丟掉） ----------
 function toPlain(v, stack = [], key = '') {
