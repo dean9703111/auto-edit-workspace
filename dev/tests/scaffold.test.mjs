@@ -771,3 +771,22 @@ test('026 檢查次數的上限由工具數：草稿檢查到第 5 次還有 ✖
   assert.match(src, /export const AUDIT_TRY_MAX = 4;/);
   assert.match(src, /→ 停手：這一段已經驗收 \$\{r\.stop\} 次還有 ✖/);
 });
+
+test('089 --map：子母畫面區塊中間、語意沒有全畫面模板的行（「其他」只有字卡）→ 併進前一段；x-point 放得下就列出來讓它單獨成段', async () => {
+  const M = await imp('lib/semantic-map.mjs');
+  const sit = [
+    { sem: '列舉', first: '04a 全畫面清單', say: '「有三件事」（資訊量大的清單）' },
+    { sem: '其他', first: '06 一般字卡', say: '「記得訂閱」（業配、優惠 CTA）' },
+    { sem: '技巧', first: 'custom `x-point`', say: '「先確認再開拍」（前後都是全畫面的動畫，中間一兩句重點）' },
+  ];
+  const specNames = ['04a fs-list', '06 concept', 'x-point'];
+  // 0:30 起 30 秒清單、10.3 秒「提示詞放在部落格」、再 30 秒清單（範例專案重剪時的樣子：這一行原本讓整支片排不出子母畫面）
+  const rows = [{ a: 1, z: 3, sem: '列舉', tier: 'B' }, { a: 4, z: 5, sem: '其他', tier: 'C' }, { a: 6, z: 9, sem: '列舉', tier: 'B' }];
+  const at = { 1: 30, 4: 60, 6: 70.3 }, secs = { 1: 30, 4: 10.3, 6: 30 };
+  const opt = (min) => ({ secsOf: (r) => secs[r.a], startOf: (r) => at[r.a], minOf: (n) => (n === 'x-point' ? min : 0), fullOf: () => 0, modeOf: (n) => (n === '06 concept' ? 'card' : 'pip') });
+  const out = M.mapOptions(rows, sit, specNames, opt(4));
+  assert.deepEqual(out.plan.map((p) => p.mode), ['pip', 'pip', 'pip']);
+  assert.equal(out[1], '〔子母畫面〕#4–#5 其他 C（10.3 秒）：併進前一段（前一段的 to 寫到這一行結尾；這一行講到的重點詞可以綁成前一段的最後一拍），子母畫面中間不切回講者；要單獨成段就用：x-point（前後都是全畫面的動畫，中間一兩句重點）');
+  // x-point 放不下（這一行比它的最短秒數短）就不列
+  assert.doesNotMatch(M.mapOptions(rows, sit, specNames, opt(12))[1], /要單獨成段就用/);
+});

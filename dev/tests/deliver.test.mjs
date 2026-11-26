@@ -637,7 +637,7 @@ const chrome = spawn(process.execPath, ['-e', keep + "const { spawn } = require(
 const stubborn = spawn(process.execPath, ['-e', "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000); process.send('ok')"], { stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
 const ids = { root: process.pid, chrome: chrome.pid, stubborn: stubborn.pid };
 let wait = 2;
-const done = () => { if (--wait === 0) fs.writeFileSync(process.argv[1], JSON.stringify(ids)); };
+const done = () => { if (--wait === 0) { fs.writeFileSync(process.argv[1] + '.tmp', JSON.stringify(ids)); fs.renameSync(process.argv[1] + '.tmp', process.argv[1]); } };
 chrome.on('message', (c) => { ids.renderer = c; done(); });
 stubborn.on('message', done);
 setInterval(() => {}, 1000);
@@ -646,19 +646,25 @@ setInterval(() => {}, 1000);
 test('killTree：連自己一個 process group 的 Chrome 和它的子行程一起收；不理 SIGTERM 的補 SIGKILL', { skip: process.platform === 'win32' }, async () => {
   const idsFile = path.join(P.root, 'tree.json');
   const root = spawn(process.execPath, ['-e', TREE, idsFile], { detached: true, stdio: 'ignore' });
-  for (let i = 0; i < 1000 && !fs.existsSync(idsFile); i++) await sleep(20);
-  assert.ok(fs.existsSync(idsFile), '測試用的行程樹沒起來');
-  const ids = JSON.parse(fs.readFileSync(idsFile, 'utf8'));
-  assert.notEqual(spawnSync('ps', ['-o', 'pgid=', '-p', String(ids.chrome)], { encoding: 'utf8' }).stdout.trim(), String(ids.root), '前提：Chrome 不在根的 group');
-  const tree = D.processTree(ids.root);
-  for (const k of ['root', 'chrome', 'renderer', 'stubborn']) assert.ok(tree.has(ids[k]), k);
-  const res = await D.killTree(ids.root, { graceMs: 400, pollMs: 50 });
-  assert.deepEqual(res.survivors, []);
-  for (const k of ['root', 'chrome', 'renderer', 'stubborn']) {
-    const stat = spawnSync('ps', ['-o', 'stat=', '-p', String(ids[k])], { encoding: 'utf8' }).stdout.trim();
-    assert.ok(!stat || stat.startsWith('Z'), `${k}（${ids[k]}）還在：${stat}`);
+  root.unref();   // 這一項中途失敗時測試檔照樣結束得了（根行程還掛著的話，整套會卡在這個檔）
+  let ids;
+  try {
+    for (let i = 0; i < 1000 && !fs.existsSync(idsFile); i++) await sleep(20);   // 樹那邊寫完才改名，看到檔就是完整的
+    assert.ok(fs.existsSync(idsFile), '測試用的行程樹沒起來');
+    ids = JSON.parse(fs.readFileSync(idsFile, 'utf8'));
+    assert.notEqual(spawnSync('ps', ['-o', 'pgid=', '-p', String(ids.chrome)], { encoding: 'utf8' }).stdout.trim(), String(ids.root), '前提：Chrome 不在根的 group');
+    const tree = D.processTree(ids.root);
+    for (const k of ['root', 'chrome', 'renderer', 'stubborn']) assert.ok(tree.has(ids[k]), k);
+    const res = await D.killTree(ids.root, { graceMs: 400, pollMs: 50 });
+    assert.deepEqual(res.survivors, []);
+    for (const k of ['root', 'chrome', 'renderer', 'stubborn']) {
+      const stat = spawnSync('ps', ['-o', 'stat=', '-p', String(ids[k])], { encoding: 'utf8' }).stdout.trim();
+      assert.ok(!stat || stat.startsWith('Z'), `${k}（${ids[k]}）還在：${stat}`);
+    }
+  } catch (e) {   // 失敗時把樹收掉（根的 group＋Chrome 的 group），不留在背景
+    for (const g of [root.pid, ids?.chrome]) { try { if (g) process.kill(-g, 'SIGKILL'); } catch { /* 已經走了 */ } }
+    throw e;
   }
-  root.unref();
 });
 
 test('killTree：順便刪這次收掉的 render 留下的影格暫存；別人的（主人還活著、沒有 owner.json）不動', { skip: process.platform === 'win32' }, async () => {

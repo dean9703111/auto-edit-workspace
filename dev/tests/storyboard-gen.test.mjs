@@ -204,3 +204,28 @@ test('需要我決定的事：去重、把 AI 自己能決定的分開、段號�
   assert.match(r.answers[0].q, /講者的姓名與頭銜/);
   assert.deepEqual(r.requests, [], '回答不擋通過');
 });
+
+test('089 畫面文字那一行的欄位名稱不帶「」例字（x-point 的小標說明有三個）：沒改就沒有「文字有 N 則」的提醒、改字套回對的欄位；089 之前產生的那一行也讀得懂', () => {
+  const xp = { id: 'x0105', type: 'custom', template: 'x-point', from: '#13', to: '#14e', slots: { tag: '提示詞', key: '整理到部落格', sub: '連結在說明欄', icon: 'link', at: '#13@句' }, story: { say: '去哪裡找', why: '一句提醒' } };
+  const plan2 = { ...plan, scenes: [...plan.scenes, xp] };
+  const items2 = new Map([...items, [xp.id, { id: xp.id, start: 40, end: 46, layoutZh: '子母畫面', label: 'custom x-point', opaque: true }]]);
+  const fields = G.textFields(xp, { scenes, specs });
+  assert.ok(fields.some((f) => /「/.test(f.label)), '規格裡的欄位說明本來就帶例字（這個前提沒了，這個測試可以刪）');
+  assert.equal(G.lineLabel('小標（選填，例「重點」「注意」「接下來」）'), '小標');
+  assert.equal(G.lineLabel('標題'), '標題');
+  const md = G.renderStoryboard({ ...ctx(), plan: plan2, items: items2 });
+  const line = md.split('\n').slice(md.split('\n').findIndex((l) => l.startsWith('### x0105'))).find((l) => l.startsWith('- 畫面文字：'));
+  assert.deepEqual([...line.matchAll(/「([^」]*)」/g)].map((m) => m[1]), ['提示詞', '整理到部落格', '連結在說明欄'], line);
+  const none = G.applyStoryboard(md, plan2, { scenes, specs });
+  assert.deepEqual([none.changed, none.unmatched], [false, []]);
+  const r = G.applyStoryboard(edit(md, 'x0105', '畫面文字', (l) => l.replace('整理到部落格', '放在部落格')), plan2, { scenes, specs });
+  assert.deepEqual(r.unmatched, []);
+  assert.equal(r.plan.scenes.find((x) => x.id === 'x0105').slots.key, '放在部落格');
+  assert.equal(r.plan.scenes.find((x) => x.id === 'x0105').slots.tag, '提示詞', '別的欄位不動');
+  // 舊的分鏡表：那一行的欄位名稱是規格原文（帶例字）
+  const old = edit(md, 'x0105', '畫面文字', () => `- 畫面文字：${fields.map((f) => `${f.label}「${f.value === '連結在說明欄' ? '連結放說明欄' : f.value}」`).join('；')}`);
+  const o = G.applyStoryboard(old, plan2, { scenes, specs });
+  assert.deepEqual(o.unmatched, []);
+  assert.deepEqual(o.changes.length, 1);
+  assert.equal(o.plan.scenes.find((x) => x.id === 'x0105').slots.sub, '連結放說明欄');
+});

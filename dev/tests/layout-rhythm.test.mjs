@@ -74,3 +74,29 @@ test('053 直式：停不到 12 秒、1 分鐘切超過 3 次都報；只有一�
   assert.deepEqual(L.portraitFindings([seg('a', 0, 40, false)], { total: 40 }), []);
   assert.deepEqual([L.PORTRAIT_RHYTHM.stay, L.PORTRAIT_RHYTHM.switches, L.PORTRAIT_RHYTHM.window], [12, 3, 60]);
 });
+
+// 089：範例專案重剪時遇到的兩件事
+test('089 章節角標不算一種版面：放在子母畫面中間不會把它切成兩塊（角標是疊在別段上的小標，可以和別段重疊）', () => {
+  assert.equal(L.modeOfLayout('overlay', 'chapter-tag'), null);
+  const seg = (id, start, end, layout, key) => ({ id, start, end, mode: L.modeOfLayout(layout, key) });
+  // 0:30 進子母畫面，1:14 換章（角標 5 秒，整段被下一段蓋住），到 1:48：連續 78 秒
+  const segs = [seg('s1', 0, 30, 'overlay'), seg('x1', 30, 74, 'pip'), seg('c01', 74, 79, 'overlay', 'chapter-tag'), seg('x2', 74, 108, 'pip')];
+  assert.deepEqual(L.layoutFindings(segs), []);
+  assert.deepEqual(L.layoutRuns(segs).map((r) => [r.mode, r.start, r.end]), [['card', 0, 30], ['pip', 30, 108]]);
+  // 角標在兩塊子母畫面之間、講者露臉 5 秒：兩塊還是各算各的（角標不會把它們接起來）
+  const apart = L.layoutFindings([seg('x1', 30, 60, 'pip'), seg('c01', 60, 65, 'overlay', 'chapter-tag'), seg('x2', 65, 95, 'pip')]);
+  assert.deepEqual(apart.map((f) => [f.rule, f.secs]), [['pip', 30], ['pip', 30]]);
+});
+
+test('089 排版面：夾在中間、沒有全畫面模板的一行剛好超過 10 秒一點點（10.3）照樣併進去（留 0.5 秒容差，和別條規則一樣）；12 秒還是斷', () => {
+  const rows = (list) => list.map(([a, t, d, first, any]) => ({ a, z: a, t, d, m: { first, any } }));
+  const opt = { startOf: (r) => r.t, secsOf: (r) => r.d, modesOf: (r) => r.m };
+  const P = ['pip'], C = ['card'];
+  // 範例專案的樣子：0:30 起 33.7 秒有全畫面模板、中間「提示詞放在部落格」10.3 秒（語意是「其他」，只有字卡）、後面 28 秒有全畫面模板
+  const r = rows([[1, 0, 30, 'card', C], [15, 30.5, 33.7, 'pip', P], [28, 64.2, 10.3, 'card', C], [32, 74.5, 28, 'pip', P], [45, 102.5, 5.6, 'card', C]]);
+  const p = L.planLayout(r, opt);
+  assert.deepEqual(p.map((x) => x.mode), ['card', 'pip', 'pip', 'pip', 'card']);
+  assert.deepEqual(p.map((x) => x.merge), [false, false, true, false, false]);
+  r[2].d = 12;
+  assert.deepEqual(L.planLayout(r, opt).map((x) => x.mode), ['card', 'card', 'card', 'card', 'card']);
+});

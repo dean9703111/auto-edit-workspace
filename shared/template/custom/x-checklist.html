@@ -138,6 +138,9 @@
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const ROWS = '#xchk-r1, #xchk-r2, #xchk-r3, #xchk-r4';   // 全部的列（3 項時拿掉 r4）  // @sub n==3: const ROWS = '#xchk-r1, #xchk-r2, #xchk-r3'; @@ n==2: const ROWS = '#xchk-r1, #xchk-r2';
     const N = $q('#x-checklist .xchk-row').length;    // 幾項＝上面 HTML 的列數，不用改
+    // 同一拍的幾項（同一句連著講、綁同一個詞）不同時寫出來：後一項至少晚前一項 SAME 秒，一項一項打勾（E＝這一項實際出現的時刻）
+    const SAME = 0.5;
+    const E2 = Math.max(T2, T1 + SAME);
     if (P.portrait) { $q('#xchk-card .sc-wcard__bar')[0].appendChild($q('#xchk-n')[0]); P.in('#xchk-n', 1.4); }   // 直式：計數移進標題列右邊（進度區只剩軌道），軌道之後 0.4 秒淡入（同一秒新元素 ≤ 2）
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
@@ -156,29 +159,31 @@
     P.spot(ROWS, '#xchk-r1', T1, { scale: 1.03, lift: -8, dim: 0.6 });
     P.in('#xchk-now1', T1);
     // 拍 3 第 2 項：同拍 2；淡色底從上一項移過來
-    P.chars('#xchk-t2', T2);
-    P.stroke('#xchk-on2, #xchk-k2', T2 + 0.3, { dur: 0.4 });
-    P.count('#xchk-n', T2 + 0.3, { from: 1, to: 2, dur: 0.4, suffix: ' / ' + N });
-    P.bar('#xchk-fill', T2 + 0.3, { from: 1 / N, to: 2 / N, dur: 0.6 });
-    P.spot(ROWS, '#xchk-r2', T2, { scale: 1.03, lift: -8, dim: 0.6 });
-    P.out('#xchk-now1', T2);  P.in('#xchk-now2', T2);
+    P.chars('#xchk-t2', E2);
+    P.stroke('#xchk-on2, #xchk-k2', E2 + 0.3, { dur: 0.4 });
+    P.count('#xchk-n', E2 + 0.3, { from: 1, to: 2, dur: 0.4, suffix: ' / ' + N });
+    P.bar('#xchk-fill', E2 + 0.3, { from: 1 / N, to: 2 / N, dur: 0.6 });
+    P.spot(ROWS, '#xchk-r2', E2, { scale: 1.03, lift: -8, dim: 0.6 });
+    P.out('#xchk-now1', E2);  P.in('#xchk-now2', E2);
     // @if n>=3 {
     // 拍 4 第 3 項：同拍 3
-    P.chars('#xchk-t3', T3);
-    P.stroke('#xchk-on3, #xchk-k3', T3 + 0.3, { dur: 0.4 });
-    P.count('#xchk-n', T3 + 0.3, { from: 2, to: 3, dur: 0.4, suffix: ' / ' + N });
-    P.bar('#xchk-fill', T3 + 0.3, { from: 2 / N, to: 3 / N, dur: 0.6 });
-    P.spot(ROWS, '#xchk-r3', T3, { scale: 1.03, lift: -8, dim: 0.6 });
-    P.out('#xchk-now2', T3);  P.in('#xchk-now3', T3);
+    const E3 = Math.max(T3, E2 + SAME);
+    P.chars('#xchk-t3', E3);
+    P.stroke('#xchk-on3, #xchk-k3', E3 + 0.3, { dur: 0.4 });
+    P.count('#xchk-n', E3 + 0.3, { from: 2, to: 3, dur: 0.4, suffix: ' / ' + N });
+    P.bar('#xchk-fill', E3 + 0.3, { from: 2 / N, to: 3 / N, dur: 0.6 });
+    P.spot(ROWS, '#xchk-r3', E3, { scale: 1.03, lift: -8, dim: 0.6 });
+    P.out('#xchk-now2', E3);  P.in('#xchk-now3', E3);
     // @}
     // @if n>=4 {
     // 拍 5 第 4 項：同拍 3（3 項時刪掉這 6 行，見檔頭）
-    P.chars('#xchk-t4', T4);
-    P.stroke('#xchk-on4, #xchk-k4', T4 + 0.3, { dur: 0.4 });
-    P.count('#xchk-n', T4 + 0.3, { from: 3, to: 4, dur: 0.4, suffix: ' / ' + N });
-    P.bar('#xchk-fill', T4 + 0.3, { from: 3 / N, to: 4 / N, dur: 0.6 });
-    P.spot(ROWS, '#xchk-r4', T4, { scale: 1.03, lift: -8, dim: 0.6 });
-    P.out('#xchk-now3', T4);  P.in('#xchk-now4', T4);
+    const E4 = Math.max(T4, E3 + SAME);
+    P.chars('#xchk-t4', E4);
+    P.stroke('#xchk-on4, #xchk-k4', E4 + 0.3, { dur: 0.4 });
+    P.count('#xchk-n', E4 + 0.3, { from: 3, to: 4, dur: 0.4, suffix: ' / ' + N });
+    P.bar('#xchk-fill', E4 + 0.3, { from: 3 / N, to: 4 / N, dur: 0.6 });
+    P.spot(ROWS, '#xchk-r4', E4, { scale: 1.03, lift: -8, dim: 0.6 });
+    P.out('#xchk-now3', E4);  P.in('#xchk-now4', E4);
     // @}
 
     // 收：講到「全部好了」→ 回均衡（全部亮回、淡色底收掉）＋完成色疊在進度條上淡入；完成態停到段尾

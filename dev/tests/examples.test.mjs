@@ -101,7 +101,7 @@ const PCONST = { BEAT: 0.15, STROKE: 0.7, READ: 1.2, dur: () => 1e3 };   // dur�
 function constsOf(p) {
   const out = beatsOf(p);
   for (const m of p.code.matchAll(/\bconst ([A-Z][A-Z0-9]*) = ([^;]+);/g)) {
-    if (m[1] in out || !/^(?:[A-Z][A-Z0-9]*|P\.[A-Z_]+|\d+(?:\.\d+)?|[\s+\-*/()])+$/.test(m[2].trim())) continue;   // 只收算式（不收 const P = SceneMotion(…)）
+    if (m[1] in out || !/^(?:[A-Z][A-Z0-9]*|P\.[A-Z_]+|Math\.(?:max|min)|\d+(?:\.\d+)?|[\s+\-*/(),])+$/.test(m[2].trim())) continue;   // 只收算式（不收 const P = SceneMotion(…)）；089：Math.max／min 也算（同一拍的幾項錯開）
     out[m[1]] = Function(...Object.keys(out), 'P', `return ${m[2]}`)(...Object.values(out), PCONST);
   }
   return out;

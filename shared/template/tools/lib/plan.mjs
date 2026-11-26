@@ -69,6 +69,7 @@ const DECLICK = 0.02;      // 剪接點兩側的人聲淡入淡出（避免爆�
 const VOICE_ERR = 1;       // 只有聲音的區間沒被蓋住超過 1 秒就 ✖
 const VOICE_WARN = 0.1;      // 沒被蓋住超過 0.1 秒就 ⚠（舊值 0.5）
 const PIP_MIN = 0.5;        // 子母畫面片段短於 0.5 秒就不放（只會閃一下）
+export const FX_MIN = 2.5;  // 字卡動態至少這麼長（進場約 0.5、看完 1.2、退場 0.4；動畫本身 3–6 秒）。089：文字對時的自動修把 from 往後挪，一張打字機只剩 1.2 秒也沒人提醒
 const FULL_AT = 0.5;        // 034：有全幕版的疊加字卡，一半以上的時間落在只有聲音的區間就自動換成全幕版
 const SCREEN_SETTLE = 0.7;  // 034：全畫面段進場後 0.7 秒內不推畫面（進場還在動）
 const PUSH_NEAR = 1.0;      // 034：小節的第一句在這一段起點前後 1 秒內＝這一段是小節開頭（前後都是全畫面就用上推）
@@ -408,8 +409,11 @@ export function textSyncIssues(it, cues) {
     if (Math.abs(diff) < TEXT_SYNC.warn - 1e-9) continue;
     const head = `${it.id} 的${fd.fx ? ' fx ' : ' '}${fd.name}「${plainText(fd.text).trim()}」在 ${fmt(fd.at)} 出現`;
     const body = diff < 0 ? `「${s.kw}」${fmt(s.sec)}（#${s.n}）才講到` : `「${s.kw}」${fmt(s.sec)}（#${s.n}）就講到了，晚了 ${Math.abs(diff).toFixed(2)}s`;
-    const msg = `${head}，${body} → ${fd.fix} 寫 "#${s.n}@${s.kw}"${s.real ? '' : cues.words?.length ? '（逐字稿裡找不到這個詞，講到的秒數用字數比例估）' : '（沒有詞級逐字稿，講到的秒數用字數比例估）'}`;
-    out.push({ level: Math.abs(diff) > TEXT_SYNC.error + 1e-9 ? 'error' : 'warn', msg, field: fd.name, fix: fd.fix, shown: fd.at, spoken: s.sec, n: s.n, kw: s.kw, real: s.real, diff });
+    // 089 字卡動態：把 from 挪到講到的地方，這張卡剩不到 FX_MIN 秒（只會閃一下）→ 不叫人挪（也不自動挪：fix 給 null），改卡上的字
+    const left = fd.fx && diff < 0 && isNum(it.end) ? r3(it.end - s.sec) : null, flash = left != null && left < FX_MIN - 1e-6;
+    const how = flash ? `卡上的字換成這段前半句講到的詞，或 to 也往後延（from 挪到「${s.kw}」${left > 0 ? `這張卡只剩 ${left}s` : '就超過這段的結尾'}，字卡動態至少 ${FX_MIN}s）` : `${fd.fix} 寫 "#${s.n}@${s.kw}"`;
+    const msg = `${head}，${body} → ${how}${s.real ? '' : cues.words?.length ? '（逐字稿裡找不到這個詞，講到的秒數用字數比例估）' : '（沒有詞級逐字稿，講到的秒數用字數比例估）'}`;
+    out.push({ level: Math.abs(diff) > TEXT_SYNC.error + 1e-9 ? 'error' : 'warn', msg, field: fd.name, fix: flash ? null : fd.fix, shown: fd.at, spoken: s.sec, n: s.n, kw: s.kw, real: s.real, diff });
   }
   return out;
 }
@@ -1207,6 +1211,8 @@ function segmentContent({ timed, cues, icons, consts, chapters, badgeOn, tm, C, 
   // 換小節（右上角標換字）就從 1 重數：不然片子後半段會出現「35 手機下載 App」，和角標的 STEP 3 對不上（作者：左右兩邊都有步驟會混亂）
   let stepSec;
   for (const it of timed) {
+    // 字卡動態太短（⚠，不擋：舊的 plan 不會因此不能 build；--autofix 看到多出一則提醒就不會把 from 往後挪成這樣）
+    if (it.type === 'fx' && it.fxDef && it.D < FX_MIN - 1e-6) it.warnings.push(`${it.where} 段長 ${it.D}s，字卡動態至少 ${FX_MIN}s（只會閃一下，字來不及看）→ to 往後延到至少 ${fmt(it.start + FX_MIN)}；是 from 為了對到卡上的字才往後挪的，就把卡上的字換成這段前半句講到的詞`);
     if (it.type === 'scene') {
       const sc = it.scene;
       if (sc.duration?.min && sc.bindsSrt !== false && it.D < sc.duration.min - 1e-6) it.errors.push(`${it.where} 段長 ${it.D}s，「${sc.zh}」至少 ${sc.duration.min}s → to 往後延到至少 ${fmt(it.start + sc.duration.min)}（${r3(it.start + sc.duration.min)}s）或換情境`);
