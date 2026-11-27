@@ -43,7 +43,7 @@ node shared/template/tools/capcut.mjs --project projects/<專案>
 
 在背景跑（同時 3 支，做過的不重做）。只重做某幾段：`--only s05,s12`。產出都在 `output/capcut/`：`主軌.mp4`（講者＋人聲＋片尾配樂，沒有字卡和字幕）、每段一支 ProRes 4444 `.mov`（有透明通道，帶自己那段的音效）、`字幕.srt`、`清單.md`（每支放在剪映時間軸的哪一秒）。
 完成判準：印「✓ N 支都好了」和「→ 清單：…」那一行；把 `清單.md` 的路徑和怎麼排的四步貼給使用者。章節角標不輸出（使用者問起，請他在剪映用文字貼）。
-使用者要「直接排進剪映」「做成剪映草稿」（Mac）：素材做好後跑 `node shared/template/tools/capcut.mjs draft --project projects/<專案>`，印「✓ 剪映草稿：…」就把最後一行「→ 打開剪映，首頁找『…』」貼給使用者。印「✖ 剪映開著」請使用者關掉剪映再跑；同名草稿要換掉才加 `--force`（先問使用者）。
+使用者要「直接排進剪映」「做成剪映草稿」（Mac 剪映專業版；Windows 的 CapCut、剪映）：素材做好後跑 `node shared/template/tools/capcut.mjs draft --project projects/<專案>`，印「✓ …草稿：…」就把最後一行「→ 打開…，首頁找『…』」貼給使用者。印「✖ …開著」請使用者關掉那個程式再跑；同名草稿要換掉才加 `--force`（先問使用者）。工具自己找草稿資料夾，不要自己設 `JIANYING_DRAFT_ROOT`。
 
 ## 自我核對
 

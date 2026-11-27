@@ -35,7 +35,7 @@ before(async () => {
   file = path.join(work, 'storyboard.md');
   fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
   fs.mkdirSync(path.join(root, 'shared'));
-  fs.symlinkSync(TEMPLATE, path.join(root, 'shared', 'template'), 'dir');
+  fs.symlinkSync(TEMPLATE, path.join(root, 'shared', 'template'), 'junction');
   fs.writeFileSync(path.join(work, 'hyperframes', 'plan.json'), JSON.stringify({ version: 1, scenes: [{ id: 's01', scene: 'speaker', from: '#1', to: '#2e' }] }));
   fs.writeFileSync(file, MD);
   editor = await startEditor({ cwd: root, flags: { project, template: path.join(root, 'shared', 'template') }, port: 0, writeState: false });
@@ -209,7 +209,8 @@ test('流程列：標出這一頁、走過的步驟與等你回覆的那一步�
   fs.writeFileSync(path.join(work, 'cuts.md'), '# 剪輯清單\n\n## NG\n\n| 剪 | 時間碼 | 內容 | 原因 | 待確認 |\n|---|---|---|---|---|\n');
   fs.writeFileSync(path.join(work, '製作進度.md'), ['# 製作進度', '', '## 開工決策表', '', '| 欄 | 值 |', '|---|---|', '| 主軌種類 | 只有真人 |', '', '## 停點紀錄', '', '| 時間 | 停點 | 狀態 | 使用者原話 | 寫回哪裡 |', '|---|---|---|---|---|', '| 2026-11-06 10:00 | ① 剪輯清單 | 通過 | 可以 | |', '| 2026-11-06 10:05 | ③ 分鏡表 | 待回覆 | | |', '', '## 回饋輪', ''].join('\n'));
   const flow = await (await fetch(new URL('/api/flow', editor.url))).json();
-  assert.deepEqual(flow.steps.map((s) => [s.id, s.state]), [['cuts', 'done'], ['framing', 'none'], ['storyboard', 'waiting'], ['final', 'none']]);
+  assert.deepEqual(flow.steps.map((s) => [s.id, s.state]), [['cuts', 'done'], ['framing', 'none'], ['storyboard', 'waiting'], ['final', 'none'], ['cover', 'none']]);   // 091 最後一格封面（不是停點）
+  assert.equal(flow.steps.at(-1).optional, true);
   assert.equal(flow.waiting, 'storyboard');
   await page.goto(new URL('/storyboard', editor.url).href, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#flowbar .fb-step.on');

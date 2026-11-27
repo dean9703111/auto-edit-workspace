@@ -11,7 +11,8 @@
 //                  058 聲音的滑桿（人聲、音效、素材原聲、背景音樂、範圍音量、各段音量）直接改播放器裡每個出聲元素的 data-volume，馬上聽得到
 // 兩者對外都用 rough.mp4 的秒數（app.t）。
 import { clamp, cutIndexAt, outOf, roughOf, effectsAt, dbToGain, gainAt, MEDIA_TRANS } from './model.mjs';
-import { CAP_VARS } from '/lib/caption-style.mjs';
+import { CAP_VARS, markWords } from '/lib/caption-style.mjs';
+import { cjkSpace } from './text.mjs';
 import { soundKind, liveScale } from './live-sound.mjs';
 
 export class SimPreview {
@@ -137,7 +138,9 @@ export class SimPreview {
     const cue = A.captionAt(t);
     const txt = cue ? cue.text : '';
     const span = this.el.caption.firstElementChild || this.el.caption;
-    if (span.textContent !== txt) { span.textContent = txt; this.el.caption.classList.toggle('off', !txt); }
+    // 091 只標幾個字：那幾個字包成 <em class="cw">（和完成影片同一支 markWords、同一份 kit/captions.css）
+    const html = cue ? markWords(txt, A.wordsOf?.(cue.n) || []) : '';
+    if (span._html !== html) { span.innerHTML = html; span._html = html; this.el.caption.classList.toggle('off', !txt); }
     this.el.caption.classList.toggle('cg--em', !!cue && !!A.isMark?.(cue.n));   // 038 重點字幕：和完成影片同一個 class（kit/captions.css）
     const mediaOn = this.tickMedia(t, fx.audio);
     this.tickHint(t, mediaOn || inCut);
@@ -594,19 +597,20 @@ export class PlayerPreview {
     const text = new Map(A.cues.map((c) => [c.n, c.text]));
     for (const el of root.querySelectorAll('.cg')) {
       const n = Number(el.id.slice(3));
-      if (text.get(n) === el.textContent) el.classList.toggle('cg--em', A.isMark(n));
+      if (cjkSpace(text.get(n) ?? '') === el.textContent) el.classList.toggle('cg--em', A.isMark(n));   // build 的字幕補過中英文之間的空格
     }
   }
   // r8 字幕只改字（作者：「調整字幕應該要直接變更吧？不需要按更新預覽」）：播放器裡那一則字幕直接換成剪輯台現在的字
   //   （build 寫在 compositions/captions.html 的 <div class="cg" id="cg-N"><span>…</span></div>）。每一則的時間和上次 build 一樣才換
-  //   （app.textLive；分割、合併、改時間等「更新預覽」）；第一次換之前記下 build 做進去的那一份，改回原本的字就還原（只標幾個字的 <em class="cw"> 照原本的字再包一次）
+  //   （app.textLive；分割、合併、改時間等「更新預覽」）；第一次換之前記下 build 做進去的那一份，對不上剪輯台的那幾則還原成它。
+  // 091 只標幾個字也在這裡馬上換：那一則的字和剪輯台現在那一句一樣（句號對得上）時，照剪輯台現在標的字重包 <em class="cw">（整則重點的不包）
   applyText() {
     const A = this.app;
     let doc = null;
     try { doc = this.p?.iframeElement?.contentDocument || null; } catch { /* 不同源時讀不到 */ }
     const root = doc?.querySelector(CAP_ROOT);
-    if (!root || !A.textLive) return;
-    const live = A.textLive(), key = `${live}|${A.ver}`;
+    if (!root || !A.cues) return;
+    const live = !!A.textLive?.(), key = `${live}|${A.ver}|${A.markKey?.() ?? ''}`;
     if (root.dataset.textKey === key) return;
     root.dataset.textKey = key;
     const text = new Map(A.cues.map((c) => [c.n, c.text]));
@@ -616,20 +620,10 @@ export class PlayerPreview {
       if (el.dataset.builtHtml == null) el.dataset.builtHtml = span.innerHTML;
       const built = doc.createElement('span');
       built.innerHTML = el.dataset.builtHtml;
-      const want = live ? text.get(Number(el.id.slice(3))) : null;
-      if (want == null || want === built.textContent) { if (span.innerHTML !== el.dataset.builtHtml) span.innerHTML = el.dataset.builtHtml; continue; }
-      if (span.textContent === want) continue;
-      span.textContent = want;
-      for (const w of [...built.querySelectorAll('em.cw')].map((x) => x.textContent)) {
-        const node = [...span.childNodes].find((x) => x.nodeType === 3 && x.data.includes(w));
-        if (!node) continue;
-        const mid = node.splitText(node.data.indexOf(w));
-        mid.splitText(w.length);
-        const em = doc.createElement('em');
-        em.className = 'cw';
-        em.textContent = w;
-        mid.replaceWith(em);
-      }
+      const n = Number(el.id.slice(3)), cur = text.get(n);
+      const want = live && cur != null ? cjkSpace(cur) : built.textContent;
+      const html = cur != null && cjkSpace(cur) === want ? markWords(want, A.isMark?.(n) ? [] : (A.wordsOf?.(n) || []).map(cjkSpace)) : el.dataset.builtHtml;
+      if (span.innerHTML !== html) span.innerHTML = html;
     }
   }
   // 058 播放器裡會出聲、剪輯台管得到音量的元素（editor/live-sound.mjs soundKind 認得的 id；沒聲音的影片層不算）

@@ -47,10 +47,10 @@ node shared/template/tools/versions.mjs learn --project projects/<專案>
 node shared/template/tools/versions.mjs learn --project projects/<專案> --page
 ```
 
-它驗欄位（✖ 照 → 改好再跑），寫 `work/feedback/learn-choices.html`（固定模板，一個檔；照落點分組，每條有現行、建議、代價、證據，選「照做／不要／再想想」）。平台能發布網頁就發布、給網址；不能就給檔案路徑。不要自己另做一頁。回覆的最後兩行：
+它驗欄位（✖ 照 → 改好再跑），寫 `work/feedback/learn-choices.html`（固定模板，一個檔；照落點分組，每條有現行、建議、代價、證據，選「照做／不要／再想想」）。剪輯台的 `/learn` 直接給這一頁：它印「學習清單網址：」就給那個網址；印「剪輯台沒開」就照它印的指令開剪輯台，給剪輯台印的「學習清單：」那一行；開不了剪輯台才給檔案路徑。不要自己另做一頁、不另外發布。回覆的最後兩行：
 
 ```
-學習清單：<網址或 projects/<專案>/work/feedback/learn-choices.html>
+學習清單：<剪輯台的 /learn 網址，開不了才給 projects/<專案>/work/feedback/learn-choices.html>
 請回：每條選「照做／不要／再想想」，按最下面「複製答案」貼回來
 ```
 

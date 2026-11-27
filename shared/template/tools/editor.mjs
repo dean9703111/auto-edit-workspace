@@ -59,13 +59,16 @@ import { requestsInfo, doRequestsStatus, doRequests, requestsList, doRequestsLis
 import { roundInfo, startUse } from './editor/server/rounds.mjs';
 import { writeLearn } from './lib/learn.mjs';
 import { designState, designAsset, designPreviews, setDesignColor, uploadDesign, prepareDesignRequest, importDesignCandidate, restoreOriginalBackground, candidateAsset, applyDesign, discardDesign, removeReference, designRequestStatus, setDesignRequestStatus } from './editor/server/design.mjs';
-import { coverState, prepareCoverRequest, setCoverOptions, editCover, pickCoverChoice, coverAsset } from './editor/server/cover.mjs';
+import { coverState, prepareCoverRequest, setCoverOptions, editCover, pickCoverChoice, coverAsset, coverVideo } from './editor/server/cover.mjs';
 import { r3 } from './lib/time.mjs';
 import { LOUD } from './lib/audio.mjs';
 import { LOCAL_ROLES, localSfxDir, wavSeconds } from './lib/sfx-local.mjs';
 import { readBedInfo, readEndInfo } from './lib/music.mjs';
 import { ENDING, ENDING_MOTIONS, ENDING_MOTION, MOTION, readEndingSetting } from './lib/ending.mjs';
 import { soundOf, liveFingerprint, liveOk, LIVE_INFO, LIVE_INFO_V } from './editor/live-sound.mjs';
+import { hideChildWindows } from './lib/hide-windows.mjs';
+// 091 背景跑的剪輯台（Windows）沒有主控台：叫 ffprobe／ffmpeg 時不跳黑色視窗（lib/hide-windows.mjs）
+if (process.env.AUTO_EDIT_EDITOR_CHILD) hideChildWindows();
 
 export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, checkTemplateSlots, subtitles };
 export { requestsInfo, doRequestsStatus, doRequests };   // 修改單（實作在 editor/server/requests.mjs，versions.mjs 也用）
@@ -830,6 +833,7 @@ async function getState(ctx) {
     client: clientRev(),
     unsaved: readUnsaved(ctx).at(-1) ?? null,
     speaker: speakerInfo(ctx, plan.data),
+    learnPage: fs.existsSync(learnFile(P.project)),   // 091 學習清單做好了：頁面給「打開學習清單」
     captionStyle: captionInfo(ctx),
     preview: { player: { available: ctx.player.available, version: ctx.player.version ?? null, reason: ctx.player.reason ?? null }, composition: '/composition/index.html', ...builtInfo(ctx, plan) },
     build: buildBrief(ctx),
@@ -1374,7 +1378,11 @@ async function handle(ctx, req, res) {
   if (p === '/framing' || p === '/framing.html') return sendFile(req, res, path.join(UI_DIR, 'framing.html'));
   if (p === '/cuts' || p === '/cuts.html') return sendFile(req, res, path.join(UI_DIR, 'cuts.html'));
   if (p === '/cover' || p === '/cover.html') return sendFile(req, res, path.join(UI_DIR, 'cover.html'));
+  // 091 學習清單：AI 做好的選擇頁（一個檔、資料內嵌）；還沒做就說怎麼做
+  if (p === '/learn' || p === '/learn.html') { const f = learnFile(P.project); return fs.existsSync(f) ? sendFile(req, res, f, { type: 'text/html; charset=utf-8' }) : sendText(res, 404, '這一集還沒有學習清單：在剪輯台按「整理這集的調整給 AI」，把複製的那一行貼給 AI，它做好選擇頁後這裡就打得開。'); }
   if (p === '/api/cover') return sendJson(res, 200, coverState(ctx));
+  // 091 封面台的時間軸：和剪輯台同一支（pickVideo：build 重新編碼過、每秒一個關鍵影格的比較新就用它，拖曳跳格才不會解碼失敗；時間和 rough.mp4 一樣），都沒有才用 coverVideo（rough.mp4，再沒有就 main.mp4）
+  if (p === '/cover/video') { const f = pickVideo(P) || coverVideo(ctx); return f ? sendFile(req, res, f, { type: 'video/mp4' }) : sendText(res, 404, '找不到 work/rough.mp4'); }
   if (p.startsWith('/cover/file/')) { const f = coverAsset(ctx, p.slice('/cover/file/'.length)); return f ? sendFile(req, res, f) : sendText(res, 404, '找不到這張圖'); }
   if (p === '/api/cuts') return sendJson(res, 200, cutsState(ctx));
   if (p === '/storyboard' || p === '/storyboard.html') return sendFile(req, res, path.join(UI_DIR, 'storyboard.html'));
@@ -1598,7 +1606,14 @@ export async function stopEditor(stateFile, project) {
 }
 
 // 各頁網址（CLI 印的、ensureEditor 回傳的都是這一份）
-export const editorPages = (url) => ({ main: url, cuts: new URL('cuts', url).href, framing: new URL('framing', url).href, storyboard: new URL('storyboard', url).href, final: new URL('?view=final', url).href });
+export const editorPages = (url) => ({ main: url, cuts: new URL('cuts', url).href, framing: new URL('framing', url).href, storyboard: new URL('storyboard', url).href, final: new URL('?view=final', url).href, cover: new URL('cover', url).href, learn: new URL('learn', url).href });
+// 091 學習清單（versions.mjs learn --page 寫的 work/feedback/learn-choices.html）：剪輯台的 /learn 直接給這一頁
+const learnFile = (project) => path.join(project, 'work', 'feedback', 'learn-choices.html');
+// 啟動、已經開著時印的各頁網址（封面一直有；學習清單做好了才印）
+function printPages(u, project) {
+  for (const [k, label] of [['cuts', '剪輯清單'], ['framing', '構圖'], ['storyboard', '分鏡表'], ['final', '完成影片預覽'], ['cover', '封面']]) if (u[k]) console.log(`${label}：${u[k]}`);
+  if (u.learn && fs.existsSync(learnFile(project))) console.log(`學習清單：${u.learn}`);
+}
 
 // 開著的剪輯台：後端是舊版就關掉（回傳原本的 port，重開時沿用，使用者開著的分頁網址不變）
 async function liveEditor(stateFile, project) {
@@ -1683,10 +1698,7 @@ async function cli() {
   if (live.running) {
     const u = editorPages(live.running.url);
     console.log(`剪輯已經開著：${u.main}`);
-    console.log(`剪輯清單：${u.cuts}`);
-    console.log(`構圖：${u.framing}`);
-    console.log(`分鏡表：${u.storyboard}`);
-    console.log(`完成影片預覽：${u.final}`);
+    printPages(u, P.project);
     console.log(`專案：${rel(P.project)}（要重開先關掉：${stopCmd}）`);
     if (flags.open) openBrowser(live.running.url);
     return 0;
@@ -1696,10 +1708,7 @@ async function cli() {
     let u;
     try { u = await ensureEditor(P, { port: flags.port }); } catch (e) { console.error(`✖ ${e.message}`); return 1; }
     console.log(`剪輯：${u.main}`);
-    console.log(`剪輯清單：${u.cuts}`);
-    console.log(`構圖：${u.framing}`);
-    console.log(`分鏡表：${u.storyboard}`);
-    console.log(`完成影片預覽：${u.final}`);
+    printPages(u, P.project);
     console.log(`專案：${rel(P.project)}`);
     console.log(`已在背景執行（log：${rel(u.log)}）。關閉：${stopCmd}`);
     if (flags.open) openBrowser(u.main);
@@ -1715,10 +1724,7 @@ async function cli() {
   if (ed.port !== (flags.port ?? DEFAULT_PORT)) console.log(`port ${flags.port ?? DEFAULT_PORT} 被佔用，改用 ${ed.port}`);
   const u = editorPages(ed.url);
   console.log(`剪輯：${u.main}`);
-  console.log(`剪輯清單：${u.cuts}`);
-  console.log(`構圖：${u.framing}`);
-  console.log(`分鏡表：${u.storyboard}`);
-  console.log(`完成影片預覽：${u.final}`);
+  printPages(u, P.project);
   console.log(`專案：${rel(P.project)}`);
   console.log(ed.ctx.player.available ? `播放器：HyperFrames ${ed.ctx.player.version ?? ''}` : `播放器：不能用（${ed.ctx.player.reason}），只有即時模擬`);
   console.log(process.env.AUTO_EDIT_EDITOR_CHILD ? `背景執行中。關閉：${stopCmd}` : '按 Ctrl+C 關閉');

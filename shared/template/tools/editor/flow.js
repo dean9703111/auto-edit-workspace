@@ -1,7 +1,7 @@
 // 四頁共用的流程列：① 剪輯清單 → ② 構圖 → ③ 分鏡表 → ④ 完成影片。放在每一頁的頁首，標出這一頁、走過的步驟、現在等你回覆的那一步。
 // 讀不到 /api/flow（官網示範頁、舊服務）就不顯示，不影響頁面。
 // 剪輯台還沒排段落時是「字幕預覽」（app.js 設 body 的 data-flow-here），不是完成影片
-const PAGE = { '/cuts': 'cuts', '/cuts.html': 'cuts', '/framing': 'framing', '/framing.html': 'framing', '/storyboard': 'storyboard', '/storyboard.html': 'storyboard' };
+const PAGE = { '/cuts': 'cuts', '/cuts.html': 'cuts', '/framing': 'framing', '/framing.html': 'framing', '/storyboard': 'storyboard', '/storyboard.html': 'storyboard', '/cover': 'cover', '/cover.html': 'cover' };
 const hereNow = () => document.body.dataset.flowHere || PAGE[location.pathname] || 'final';
 
 // 主要按鈕的字色：照主色算白字或深字，對比至少 4.5（白字配橘色只有 3.1）
@@ -35,8 +35,8 @@ function render(flow) {
   }
   // 字幕預覽接在剪輯清單後面，不算一個要回覆的步驟
   const steps = here === 'rough' ? flow.steps.flatMap((s) => (s.id === 'cuts' ? [s, { id: 'rough', no: '·', label: '字幕預覽', state: 'none', ready: true, url: '/' }] : [s])) : flow.steps;
-  const at = flow.steps.findIndex((s) => s.id === here);
-  const count = at >= 0 ? `<span class="fb-count">第 ${at + 1}／${flow.steps.length} 步</span>` : '';
+  const main = flow.steps.filter((s) => !s.optional), at = main.findIndex((s) => s.id === here);   // 091 封面不算步數
+  const count = at >= 0 ? `<span class="fb-count">第 ${at + 1}／${main.length} 步</span>` : '';
   const html = steps.map((s) => {
     const on = s.id === here;
     const cls = [on ? 'on' : '', s.state, s.ready ? '' : 'off'].filter(Boolean).join(' ');
@@ -45,7 +45,7 @@ function render(flow) {
     // 還沒有內容的步驟不給點；這一頁自己也不用連
     if (on || !s.ready) return `<span class="fb-step ${cls}" title="${esc(tip)}"${on ? ' aria-current="step"' : ''}>${inner}</span>`;
     return `<a class="fb-step ${cls}" href="${esc(s.url)}" title="${esc(tip)}">${inner}</a>`;
-  }).join('<span class="fb-sep" aria-hidden="true">›</span>') + count;
+  }).map((h, i) => (i === 0 ? h : `<span class="fb-sep${steps[i].optional ? ' opt' : ''}" aria-hidden="true">${steps[i].optional ? '｜' : '›'}</span>${h}`)).join('') + count;
   if (html !== last) { nav.innerHTML = html; last = html; }
 }
 window.addEventListener('flow-here', () => { if (lastFlow) render(lastFlow); });

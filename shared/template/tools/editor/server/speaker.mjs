@@ -2,7 +2,7 @@
 // 測試用 ctx.speakerTemplate 指到暫存的 shared/template，不動真的 shared/setting.json。
 import fs from 'node:fs';
 import path from 'node:path';
-import { speakerGate, saveSpeaker } from '../../lib/speaker.mjs';
+import { speakerGate, speakerSegments, saveSpeaker } from '../../lib/speaker.mjs';
 
 const templateOf = (ctx) => ctx.speakerTemplate || ctx.P.templateDir;
 const readPlan = (ctx) => { try { return JSON.parse(fs.readFileSync(ctx.P.plan, 'utf8')); } catch { return null; } };
@@ -20,7 +20,8 @@ function shotOf(ctx, ids) {
 
 export function speakerInfo(ctx, plan = readPlan(ctx)) {
   const gate = speakerGate(templateOf(ctx), plan);
-  return { ...gate, shot: gate.needed ? shotOf(ctx, gate.segments) : null };
+  // used＝這一集用到講者介紹的段（091：剪輯台隨時可以設定講者，沒有這種段時存好不用更新預覽）
+  return { ...gate, used: speakerSegments(templateOf(ctx), plan), shot: gate.needed ? shotOf(ctx, gate.segments) : null };
 }
 
 export function doSpeakerSave(ctx, body) {

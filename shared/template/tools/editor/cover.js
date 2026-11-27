@@ -20,8 +20,70 @@ function setStatus(text, err = false) { const el = $('status'); el.textContent =
 
 // ---------- 左欄 ----------
 
-function renderCands() {
-  $('cands').innerHTML = state.candidates.map((c) => `<button class="cv-cand" data-at="${c.at}" aria-pressed="${c.at === state.at}" aria-label="用 ${c.at} 秒那一格"><img src="${esc(c.thumb)}" alt=""><span>${c.at}s</span></button>`).join('');
+// 091 講者那一格：一張預覽＋時間軸（取代原本 8 張候選照片；作者：「不需要有那麼多的照片顯示，而是出現時間軸讓人可以選擇用哪一張」）。
+// 拖時間軸只換預覽（影片跳到那一秒），按「用這一格」才寫 cover.json（「去背＋內容」出過就重出）。建議的幾格是時間軸下面的小刻度。
+// 每 2.5 秒看一次狀態，時間軸和刻度只在真的變了才動：拖到一半不會被拉回去，畫面也不會閃
+const fmtAt = (t) => `${Number(t).toFixed(1)} 秒`;
+// 不閃：影片藏起來只負責解碼，畫面畫在 canvas 上，新的那一格解好（seeked）才換，中間一直是上一格。
+// 拖的時候一次只跳一格：上一次還沒跳完就只記最後要去的秒數，跳完再接著跳（不會一口氣排幾十次跳格）
+let frameReady = false, seeking = false, want = null;
+function drawFrame() {
+  const v = $('frameVideo'), cv = $('frameCanvas');
+  if (!v.videoWidth) return;
+  if (cv.width !== v.videoWidth || cv.height !== v.videoHeight) { cv.width = v.videoWidth; cv.height = v.videoHeight; }
+  cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height);
+  cv.dataset.at = v.currentTime.toFixed(1);
+}
+function pumpSeek() {
+  const v = $('frameVideo');
+  if (seeking || want == null || v.readyState < 1) return;
+  const t = want;
+  want = null;
+  seeking = true;
+  v.currentTime = t;
+}
+// 片長：伺服器給的（state.duration）；剪輯台是改版前啟動的（舊的伺服器沒有 duration、video）就用影片自己的長度，並提醒重新啟動
+const durOf = () => Number(state.duration) || Number($('frameVideo').duration) || 0;
+function renderFrame() {
+  const v = $('frameVideo'), r = $('frameAt'), dur = Math.max(0.1, durOf());
+  if (!frameReady) {
+    v.addEventListener('seeked', () => { seeking = false; drawFrame(); pumpSeek(); });
+    v.addEventListener('loadedmetadata', () => {
+      // 舊的伺服器沒給片長：一開始的 max 不對，value 被夾小了 → 照影片的長度重設，換回封面用的那一格
+      if (!state.duration) { r.max = String(Math.floor(Math.max(0.1, durOf()) * 10) / 10); r.value = String(state.at ?? 0); want = Number(r.value); renderFrame(); }
+      pumpSeek();
+    });
+    if (!state.video || !state.duration) setStatus('剪輯台是更新前啟動的，時間軸先用舊的方式播；重新啟動剪輯台（node shared/template/tools/editor.mjs --stop，再開一次）比較穩。', true);
+    v.addEventListener('error', () => { seeking = false; setStatus('講者預覽載入不了（影片解碼失敗）；時間軸照樣可以挑，按「用這一格」後封面會用那一秒。', true); });
+    r.max = String(Math.floor(dur * 10) / 10);
+    r.value = String(state.at ?? 0);
+    want = Number(r.value);
+    v.src = state.video || '/media/source.mp4';   // 舊的伺服器沒有 /cover/video
+    frameReady = true;
+  }
+  const marks = $('frameMarks'), key = JSON.stringify([dur, state.candidates.map((x) => x.at)]);   // 片長變了刻度位置也要重算
+  if (marks.dataset.key !== key) {
+    marks.innerHTML = state.candidates.map((x) => `<button type="button" class="cv-mark" data-at="${x.at}" style="left:${(x.at / dur) * 100}%" aria-label="跳到建議的 ${x.at} 秒" title="建議：${x.at} 秒"></button>`).join('');
+    marks.dataset.key = key;
+  }
+  for (const m of marks.querySelectorAll('.cv-mark')) m.classList.toggle('used', Number(m.dataset.at) === state.at);
+  syncFrame();
+}
+// 預覽上的字、按鈕：現在看的這一格是不是用在封面的那一格
+function syncFrame() {
+  const t = Number($('frameAt').value), used = state.at != null && Math.abs(t - state.at) < 0.05;
+  $('frameTime').textContent = fmtAt(t);
+  $('frameNow').textContent = state.at != null ? `（封面用 ${fmtAt(state.at)}）` : '';
+  const badge = $('frameBadge');
+  badge.textContent = used ? '✓ 封面用這一格' : '預覽';
+  badge.classList.toggle('used', used);
+  $('frameUse').disabled = used;
+}
+function seekFrame(t) {
+  $('frameAt').value = String(t);
+  want = Number(t);
+  pumpSeek();
+  syncFrame();
 }
 function renderSide() {
   $('scenes').innerHTML = state.scenes.map((s) => `<div class="cv-scene${s.on ? '' : ' off'}" data-scene="${s.id}">
@@ -124,7 +186,7 @@ function apply(next) {
   if (!next.ready) { $('main').hidden = true; $('blocked').hidden = false; $('blocked').textContent = next.message.split(' → ').join('\n'); setSave('idle', '還不能做封面'); return; }
   $('main').hidden = false; $('blocked').hidden = true;
   if (!sideReady) renderSide();
-  renderCands();
+  renderFrame();
   next.scenes.forEach(renderCard);
   if (next.job?.running) setSave('busy', '出圖中…');
   else if (next.job && next.job.ok === false) setSave('error', '出圖沒有成功');
@@ -138,10 +200,12 @@ async function refresh() {
 
 // ---------- 事件 ----------
 
-$('cands').addEventListener('click', async (e) => {
-  const b = e.target.closest('.cv-cand');
-  if (!b) return;
-  try { apply(await api('/api/cover/options', { at: Number(b.dataset.at) })); } catch (err) { setStatus(err.message, true); }
+$('frameAt').addEventListener('input', () => seekFrame($('frameAt').value));
+$('frameMarks').addEventListener('click', (e) => { const m = e.target.closest('.cv-mark'); if (m) seekFrame(m.dataset.at); });
+$('frameUse').addEventListener('click', async () => {
+  const at = Math.round(Number($('frameAt').value) * 10) / 10;
+  try { apply(await api('/api/cover/options', { at })); setStatus(`講者改用 ${fmtAt(at)}那一格${state.scenes.find((s) => s.id === 'cutout')?.image ? '，「去背＋內容」重出中' : ''}。`); }
+  catch (err) { setStatus(err.message, true); }
 });
 $('scenes').addEventListener('change', (e) => { const row = e.target.closest('.cv-scene'); if (row && e.target.type === 'checkbox') row.classList.toggle('off', !e.target.checked); });
 $('copy').addEventListener('click', async () => {

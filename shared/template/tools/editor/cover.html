@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="/editor/editor.css">
 <style>
   body.cover { display: block; height: auto; min-height: 100vh; overflow: auto; }
-  body.cover .topbar { position: sticky; top: 0; z-index: 20; }
+  body.cover .topbar { position: sticky; top: 0; z-index: 20; }   /* 頁首（流程列）固定，下面捲動 */
   .cv-main { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 16px; padding: 16px; align-items: start; }
   .cv-panel { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; min-width: 0; }
   .cv-side { display: grid; gap: 18px; }
@@ -18,11 +18,21 @@
   .cv-side h2 span { font-family: var(--mono); font-size: 12px; color: var(--accent-text); margin-right: 6px; }
   .cv-hint { margin: 4px 0 8px; font-size: 13px; color: var(--mute); }
   .cv-hint code { font-family: var(--mono); font-size: 12px; background: var(--plate); padding: 0 4px; border-radius: 3px; }
-  .cv-cands { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-  .cv-cand { padding: 0; border: 2px solid transparent; border-radius: 6px; overflow: hidden; background: var(--card); min-height: 0; line-height: 0; position: relative; }
-  .cv-cand img { width: 100%; display: block; }
-  .cv-cand span { position: absolute; left: 4px; bottom: 4px; padding: 0 5px; border-radius: 4px; background: rgba(0,0,0,.66); font: 11px/1.6 var(--mono); }
-  .cv-cand[aria-pressed="true"] { border-color: var(--accent); }
+  /* 091 講者那一格：一張預覽＋時間軸（取代原本 8 張候選照片） */
+  .cv-frame { position: relative; border-radius: 6px; overflow: hidden; background: #000; border: 1px solid var(--line); aspect-ratio: 16 / 9; }
+  .cv-frame canvas { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .cv-frame video { display: none; }   /* 只拿來解碼；畫面畫在 canvas 上，跳格時留著上一格，不會閃黑 */
+  .cv-frame .cv-badge { position: absolute; left: 6px; top: 6px; padding: 0 7px; border-radius: 4px; background: rgba(0,0,0,.66); font: 12px/1.7 var(--mono); color: #fff; }
+  .cv-frame .cv-badge.used { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+  .cv-scrub { position: relative; margin-top: 8px; padding-bottom: 14px; }
+  .cv-scrub input[type="range"] { width: 100%; margin: 0; accent-color: var(--accent); }
+  .cv-marks { position: absolute; left: 0; right: 0; bottom: 0; height: 12px; }
+  .cv-mark { position: absolute; transform: translateX(-50%); width: 12px; height: 12px; min-height: 0; padding: 0; border: 0; background: transparent; cursor: pointer; }
+  .cv-mark::after { content: ""; position: absolute; left: 5px; top: 1px; width: 2px; height: 8px; border-radius: 1px; background: var(--dim); }
+  .cv-mark.used::after { background: var(--accent); height: 10px; top: 0; width: 3px; left: 4.5px; }
+  .cv-frame-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--mute); }
+  .cv-frame-row #frameTime { font-family: var(--mono); color: var(--ink); }
+  .cv-frame-row button { margin-left: auto; }
   .cv-scene { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 8px; align-items: center; margin-bottom: 10px; }
   .cv-scene input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
   .cv-scene label { font-weight: 700; }
@@ -66,15 +76,17 @@
       <div class="sub" id="projName">載入中…</div>
     </div>
   </div>
-  <div class="save-state" id="saveState" data-state="busy" role="status"><span class="dot"></span><span class="txt">載入中…</span></div>
+  <div class="save-state" id="saveState" data-state="loading" role="status"><span class="dot"></span><span class="txt">載入中…</span></div>
 </header>
 
 <main class="cv-main" id="main" hidden>
   <aside class="cv-panel cv-side">
     <section aria-labelledby="h1">
       <h2 id="h1"><span>01</span>講者的表情</h2>
-      <p class="cv-hint">「去背＋內容」那一張用這一格。點一格就換。</p>
-      <div class="cv-cands" id="cands"></div>
+      <p class="cv-hint">「去背＋內容」那一張用這一格。拖時間軸找表情，按「用這一格」。下面的小刻度是建議的幾格。</p>
+      <div class="cv-frame"><canvas id="frameCanvas" role="img" aria-label="講者畫面"></canvas><video id="frameVideo" muted playsinline preload="auto"></video><span class="cv-badge" id="frameBadge"></span></div>
+      <div class="cv-scrub"><input type="range" id="frameAt" min="0" max="1" step="0.1" value="0" aria-label="講者那一格的時間（秒）"><div class="cv-marks" id="frameMarks"></div></div>
+      <div class="cv-frame-row"><span id="frameTime">0.0 秒</span><span id="frameNow"></span><button id="frameUse" class="small primary" disabled>用這一格</button></div>
     </section>
     <section aria-labelledby="h2">
       <h2 id="h2"><span>02</span>三個情境</h2>
@@ -97,5 +109,6 @@
 <div class="cv-blocked" id="blocked" hidden></div>
 
 <script type="module" src="/editor/cover.js"></script>
+<script type="module" src="/editor/flow.js"></script>
 </body>
 </html>

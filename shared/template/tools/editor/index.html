@@ -27,7 +27,7 @@
     <span class="sep"></span>
     <button id="btnSpeakerWarn" class="warn-chip" hidden>⚠ 講者還沒設定</button>
     <button id="btnExport" data-tip="輸出完成影片：先做 4 秒測試片段確認有聲音，再輸出整支並驗收">輸出完成影片</button>
-    <button id="btnCover" data-tip="做封面：開封面台，勾情境、複製指令給 AI，出好的三張在那一頁挑（剪乾淨之後就能做）">做封面</button>
+    <button id="btnCover" data-tip="做封面：換到封面台（和上面流程列的「◎ 封面」同一頁），勾情境、複製指令給 AI，出好的三張在那一頁挑（剪乾淨之後就能做）">做封面</button>
     <button id="btnRequests" class="toggle" aria-pressed="false" data-tip="修改單：選一段動畫或錄影，在右側寫想怎麼改（換動畫、流程更細、以圖為主…），累積好複製給 AI">修改單 <span class="rq-count" id="rqCount"></span></button>
     <button id="btnHelp" class="icon ghost" data-tip="操作說明與快捷鍵（?）" aria-label="說明">?</button>
   </div>
@@ -125,7 +125,7 @@
     </div>
     <div class="side-pane" id="sideCues" hidden>
       <div class="side-search"><input id="cueSearch" type="search" autocomplete="off" placeholder="找字幕的字或句號（例 手機、#120）" aria-label="找一句字幕"><span class="side-count" id="cueCount"></span></div>
-      <div class="side-tools"><button id="capAdd" class="small" data-tip="在播放頭所在的空檔新增一句字幕">＋ 新增一句</button><button id="capFind" class="small" data-tip="尋找與取代（⌘／Ctrl＋F）：一次修正整集重複的錯字">尋找與取代</button><button id="cueMarksOnly" class="small toggle" aria-pressed="false" data-tip="重點字幕：點每一句右邊的「重點」（或選到那一句按 H），那一則改用主色底的重點樣式。按這裡只看標成重點的，再按一次看全部">重點 0 則</button><span class="side-hint">點一句就能改字，改完自動存</span></div>
+      <div class="side-tools"><button id="capAdd" class="small" data-tip="在播放頭所在的空檔新增一句字幕">＋ 新增一句</button><button id="capFind" class="small" data-tip="尋找與取代（⌘／Ctrl＋F）：一次修正整集重複的錯字">尋找與取代</button><button id="capStyleBtn" class="small" data-tip="字幕樣式：深底白字、白字黑框…、字體、大小、粗細、上下位置（整支影片一起變）">字幕樣式</button><button id="cueMarksOnly" class="small toggle" aria-pressed="false" data-tip="重點字幕：點每一句右邊的「重點」（或選到那一句按 H），那一則改用主色底的重點樣式；只標幾個字：點那一句、選字再按「重點」。按這裡只看標成重點的，再按一次看全部">重點 0 則</button><span class="side-hint">點一句就能改字，改完自動存</span></div>
       <ol class="side-list" id="cueList"></ol>
     </div>
     <div class="side-pane" id="sideIssues" hidden>
@@ -281,7 +281,7 @@
         <li><b>字卡／動畫</b>：字卡（藍、紫）、動畫（綠）。時間和版型寫進修改單給 AI 改；灰色斜線＝這裡只有講者，想加畫面可以點它。</li>
         <li><b>素材</b>：螢幕錄影和圖片。拖左右邊緣裁剪、拖中間移動；黃線是原聲音量，上下拖。</li>
         <li><b>主軌畫面</b>：拖頭尾的白色把手直接裁掉片頭片尾；按 B 在播放頭切開，點選切出的那段按 Delete 刪掉。菱形＝剪接點的轉場。變暗標「只有聲音」的地方沒有講者畫面；紅色斜線＝沒有畫面蓋住，要處理。</li>
-        <li><b>字幕</b>：雙擊改字、拖邊緣改時間；空檔夠大（≥ 0.5 秒）才能新增。上緣有一條主色的是重點字幕（右邊「字幕」分頁每一句的「重點」，或按 H）。</li>
+        <li><b>字幕</b>：雙擊改字、拖邊緣改時間；空檔夠大（≥ 0.5 秒）才能新增。上緣有一條主色的是重點字幕（右邊「字幕」分頁每一句的「重點」，或按 H）；斷開的一條是只標幾個字（改字時選字按「重點」或 Ctrl+B）。字幕的樣式、字體、大小、上下位置：右邊「字幕」分頁上面的「字幕樣式」。</li>
         <li><b>人聲</b>：黃線是音量，上下拖整條；先拖曳選一段範圍，再拖範圍裡的黃線＝只調那一段。</li>
         <li><b>音效</b>：點一下看屬性，左右拖換位置、拖左右邊緣裁掉開頭或結尾，上下拖調音量，雙擊或 Delete 靜音；按右鍵可以換一顆、還原成原本的。在空白處按右鍵「在這裡加音效」＝自己加一顆（白色虛線框），可以左右拖改時間、上下拖調音量、Delete 移除。</li>
         <li><b>背景音樂</b>：整支片墊的配樂。藍線是音量：頭尾的斜坡＝淡入淡出，講話時壓低的地方比較低、比較暗。軌頭的數字＝音量（0＝歌曲原本的音量，−40～+6，上下拖或直接打數字），喇叭＝靜音（完成影片也不放），鎖頭和其他軌一樣。點一下這一軌＝右邊「整支 → 聲音 → 背景音樂」滑桿（快速試聽、完成影片預覽都馬上聽得到）；換曲子、不要配樂請跟 AI 說。</li>
@@ -303,6 +303,7 @@
         <tr><td>右鍵／<kbd>Shift</kbd>＋<kbd>F10</kbd>／選單鍵</td><td>選到的東西的選單（<kbd>↑</kbd> <kbd>↓</kbd> 選、<kbd>Enter</kbd> 執行、<kbd>→</kbd> 開子選單、<kbd>Esc</kbd> 關；音效清單按空白鍵試聽）</td></tr>
         <tr><td><kbd>Enter</kbd></td><td>編輯選到的字幕</td></tr>
         <tr><td><kbd>H</kbd></td><td>重點字幕開／關：選到的那一句（沒選就是播放頭所在的那一句）改用主色底的重點樣式</td></tr>
+        <tr><td><kbd>Ctrl</kbd>／<kbd>⌘</kbd> + <kbd>B</kbd>（改字時）</td><td>只標選到的那幾個字；游標放在標過的字裡按：取消</td></tr>
         <tr><td><kbd>Esc</kbd></td><td>取消選取</td></tr>
         <tr><td><kbd>S</kbd></td><td>吸附開／關（拖曳時按住 <kbd>Alt</kbd> 暫時不吸）</td></tr>
         <tr><td><kbd>＋</kbd> <kbd>−</kbd></td><td>時間軸放大／縮小</td></tr>

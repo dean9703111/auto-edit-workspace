@@ -23,9 +23,9 @@ test('完成影片預覽：拖聲音滑桿、按 🔇 馬上改播放器裡的�
   const root = tmpDir(t, 'editor-live-sound-ui-');
   const shared = path.join(root, 'shared');
   fs.mkdirSync(shared);
-  fs.symlinkSync(TEMPLATE, path.join(shared, 'template'), 'dir');
-  fs.symlinkSync(path.join(WORKSPACE, 'shared', 'sfx'), path.join(shared, 'sfx'), 'dir');
-  fs.symlinkSync(path.join(WORKSPACE, 'node_modules'), path.join(root, 'node_modules'), 'dir');   // 播放器（只讀）
+  fs.symlinkSync(TEMPLATE, path.join(shared, 'template'), 'junction');
+  fs.symlinkSync(path.join(WORKSPACE, 'shared', 'sfx'), path.join(shared, 'sfx'), 'junction');
+  fs.symlinkSync(path.join(WORKSPACE, 'node_modules'), path.join(root, 'node_modules'), 'junction');   // 播放器（只讀）
   fs.writeFileSync(path.join(shared, 'setting.json'), JSON.stringify({ editor: { seen: ['coach-rough.v1', 'coach-final.v1', 'coach.v3'] } }));
   const project = path.join(root, 'projects', 'example'), work = path.join(project, 'work'), out = path.join(work, 'hyperframes');
   fs.mkdirSync(out, { recursive: true });

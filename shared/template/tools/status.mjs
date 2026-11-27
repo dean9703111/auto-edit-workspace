@@ -232,7 +232,7 @@ export function editorUrls(project, out = path.join(project, 'work', 'hyperframe
   try { s = JSON.parse(fs.readFileSync(path.join(out, '.editor', 'server.json'), 'utf8')); } catch { return null; }
   if (!s?.url || !s?.pid) return null;
   try { process.kill(s.pid, 0); } catch (e) { if (e.code !== 'EPERM') return null; }
-  try { const at = (p) => new URL(p, s.url).href; return { main: s.url, cuts: at('cuts'), framing: at('framing'), storyboard: at('storyboard'), final: at('?view=final') }; } catch { return null; }
+  try { const at = (p) => new URL(p, s.url).href; return { main: s.url, cuts: at('cuts'), framing: at('framing'), storyboard: at('storyboard'), final: at('?view=final'), cover: at('cover'), learn: at('learn') }; } catch { return null; }
 }
 
 // 背景工作還在跑，或做完了結果還沒印（lib/job.mjs）：下一步是同一條指令，會接著等或印結果，不會重跑
