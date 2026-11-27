@@ -21,7 +21,7 @@ import { stampHash } from './assemble.mjs';
 import { visibleLen } from './scenes.mjs';
 import { r3 } from './time.mjs';
 import { subtract } from './edit.mjs';
-import { captionGeom, captionRootAttrs, isDefaultStyle } from './caption-style.mjs';
+import { captionGeom, captionRootAttrs, isDefaultStyle, markWords } from './caption-style.mjs';
 import { cjkSpace } from '../editor/text.mjs';
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -60,19 +60,8 @@ export function captionWarnings(cues, canvas = null, style = null) {
   return out;
 }
 
-// 047 只標幾個字：text 裡每個 word 第一次出現的地方包成 <em class="cw">（kit/captions.css）；重疊的併成一段、字幕裡找不到的略過
-export function markWords(text, words) {
-  const t = String(text ?? '');
-  const ranges = [];
-  for (const w of words || []) { const i = w ? t.indexOf(w) : -1; if (i >= 0) ranges.push([i, i + w.length]); }
-  if (!ranges.length) return esc(t);
-  ranges.sort((x, y) => x[0] - y[0]);
-  const merged = [ranges[0].slice()];
-  for (const r of ranges.slice(1)) { const last = merged[merged.length - 1]; if (r[0] <= last[1]) last[1] = Math.max(last[1], r[1]); else merged.push(r.slice()); }
-  let out = '', at = 0;
-  for (const [a, b] of merged) { out += `${esc(t.slice(at, a))}<em class="cw">${esc(t.slice(a, b))}</em>`; at = b; }
-  return out + esc(t.slice(at));
-}
+// 047 只標幾個字的 markWords 在 caption-style.mjs（剪輯台的頁面也載那一支）；這裡照舊匯出
+export { markWords };
 
 export function buildCaptions(cues, { duration, offset = 0, compId = 'captions', blackout = [], canvas = null, style = null, marks = null, words = null }) {
   const portrait = canvas?.format === 'portrait';

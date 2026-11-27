@@ -365,21 +365,27 @@ test('047 srt-align --remap-plan：只標幾個字的換到附近、文字裡有
   assert.deepEqual(out.plan.captionMarks, ['#3@整理', '#4']);
 });
 
-test('047 剪輯台存檔：頁面只送整則的清單，檔案裡的 "#N@詞" 照留；增刪字幕時一起換句號；不在字幕裡的不寫', () => {
+test('091 剪輯台存檔：頁面送整份清單（整則的和只標幾個字的），照頁面的寫；增刪字幕時一起換句號；不在字幕裡的不寫', () => {
   const ctx = { srtText: srt, videoDur: VD };
   const withWords = PLAN_TEXT.replace('["#2", "#4"]', '["#2", "#3@字幕", "#4"]');
-  const a = W.applySave(withWords, { captionMarks: ['#7', '#2'] }, ctx);
+  const a = W.applySave(withWords, { captionMarks: ['#7', '#2', '#3@字幕'] }, ctx);
   assert.deepEqual(a.errors, []);
   assert.deepEqual(a.plan.captionMarks, ['#2', '#3@字幕', '#7']);
-  assert.equal(W.applySave(withWords, { captionMarks: ['#4', '#2'] }, ctx).text, null, '整則的沒變就不寫');
+  assert.equal(W.applySave(withWords, { captionMarks: ['#4', '#3@字幕', '#2'] }, ctx).text, null, '沒變就不寫');
+  const drop = W.applySave(withWords, { captionMarks: ['#2', '#4'] }, ctx);
+  assert.deepEqual(drop.plan.captionMarks, ['#2', '#4'], '頁面取消了 #3@字幕：拿掉');
+  const add = W.applySave(withWords, { captionMarks: ['#2', '#3@字幕', '#4', '#4@4'] }, ctx);
+  assert.deepEqual(add.plan.captionMarks, ['#2', '#3@字幕', '#4'], '同一則又寫整則又寫幾個字：整則為準');
   const off = W.applySave(withWords, { captionMarks: [] }, ctx);
-  assert.deepEqual(off.plan.captionMarks, ['#3@字幕'], '整則的都取消：只標幾個字的還在');
-  // 分割第 2 句（pos 3）：#3@字幕 → #4@字幕；頁面送新句號的整則清單
-  const b = W.applySave(withWords, { srt: { ops: [{ op: 'split', n: 2, at: 6, pos: 3 }] }, captionMarks: ['#2', '#5'] }, ctx);
+  assert.equal('captionMarks' in off.plan, false, '都取消：欄位拿掉');
+  // 分割第 2 句（pos 3）：頁面送新句號的整份清單
+  const b = W.applySave(withWords, { srt: { ops: [{ op: 'split', n: 2, at: 6, pos: 3 }] }, captionMarks: ['#2', '#4@字幕', '#5'] }, ctx);
   assert.deepEqual(b.errors, []);
   assert.deepEqual(b.plan.captionMarks, ['#2', '#4@字幕', '#5']);
+  // 頁面沒送 captionMarks（只有字幕操作）：檔案裡的照字幕操作換句號
   const c = W.applySave(withWords, { srt: { ops: [{ op: 'delete', n: 3 }] } }, ctx);
   assert.deepEqual(c.plan.captionMarks, ['#2', '#3'], '刪掉第 3 句：那一則的標記拿掉，#4 → #3');
+  assert.deepEqual(W.applySave(withWords, { captionMarks: ['#2', '#99@字幕'] }, ctx).plan.captionMarks, ['#2'], '不在字幕裡的句號不寫');
 });
 
 test('047 驗收：只標幾個字的那幾則也不拿來量一般字幕的樣式；captionWordsOf 讀 plan.json', (t) => {

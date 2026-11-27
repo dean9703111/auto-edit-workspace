@@ -18,7 +18,7 @@ test('重點字幕 UI：點「重點」→ 那一列有標示、預覽換樣式�
   const project = path.join(root, 'projects/example'), work = path.join(project, 'work');
   fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
   fs.mkdirSync(path.join(root, 'shared'));
-  fs.symlinkSync(TEMPLATE, path.join(root, 'shared/template'), 'dir');
+  fs.symlinkSync(TEMPLATE, path.join(root, 'shared/template'), 'junction');   // Windows 不用系統管理員也建得了（其他系統忽略這個參數）
   const planFile = path.join(work, 'hyperframes/plan.json'), srtFile = path.join(work, 'rough.srt');
   fs.writeFileSync(planFile, JSON.stringify({ version: 1, scenes: [{ id: 's01', scene: 'concept', from: '#4', to: '#4e', slots: { text: '第四段' } }] }, null, 2));
   fs.writeFileSync(srtFile, [1, 2, 3, 4].map((n) => `${n}\n00:00:0${(n - 1) * 2},500 --> 00:00:0${n * 2},000\n第${n}段字幕\n`).join('\n'));
@@ -106,6 +106,163 @@ test('重點字幕 UI：點「重點」→ 那一列有標示、預覽換樣式�
     await until(() => planMarks() === undefined, () => `刪掉重點字幕後 captionMarks 要拿掉，現在 ${JSON.stringify(planMarks())}`);
     assert.equal(await page.$eval('#cueMarksOnly', (b) => b.textContent), '重點 0 則');
     assert.equal((fs.readFileSync(srtFile, 'utf8').match(/-->/g) || []).length, 2);
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser?.close();
+    await editor.close();
+  }
+});
+
+test('091 只標幾個字 UI：改字時選字按「重點」或 Ctrl+B 只標那幾個字、游標放進去再按取消；屬性面板選字、×；整則為準；合併跟著字走；復原；字幕樣式的入口', { timeout: 120000 }, async (t) => {
+  const root = tmpDir(t, 'editor-capwords-ui-');
+  const project = path.join(root, 'projects/example'), work = path.join(project, 'work');
+  fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'shared'));
+  fs.symlinkSync(TEMPLATE, path.join(root, 'shared/template'), 'junction');
+  const planFile = path.join(work, 'hyperframes/plan.json'), srtFile = path.join(work, 'rough.srt');
+  fs.writeFileSync(planFile, JSON.stringify({ version: 1, scenes: [] }, null, 2));
+  const texts = ['隨時會崩潰的系統', '用對的人很少', '第三句收尾', '第四句結束'];
+  fs.writeFileSync(srtFile, texts.map((x, i) => `${i + 1}\n00:00:0${i * 2},500 --> 00:00:0${(i + 1) * 2},000\n${x}\n`).join('\n'));
+  const media = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'color=c=navy:size=320x180:rate=30', '-t', '9', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', path.join(work, 'rough.mp4')]);
+  assert.equal(media.status, 0, String(media.stderr));
+  const editor = await startEditor({ cwd: root, flags: { project, template: path.join(root, 'shared/template') }, port: 0, writeState: false });
+  let browser;
+  try {
+    browser = await puppeteer.launch({ executablePath: findChrome(), headless: true });
+    const page = await browser.newPage(), errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.setViewport({ width: 1800, height: 1000 });
+    await page.goto(editor.url);
+    await page.waitForFunction(() => window.__editor?.server);
+    await page.evaluate(() => { for (const id of ['#coach', '#coachRough']) document.querySelector(id).hidden = true; });   // 沒有段落的專案會跳初剪的導覽
+    const planMarks = () => JSON.parse(fs.readFileSync(planFile, 'utf8')).captionMarks;
+    const until = async (fn, what) => { for (let i = 0; i < 80; i++) { if (fn()) return; await new Promise((r) => setTimeout(r, 100)); } assert.fail(typeof what === 'function' ? what() : what); };
+    const saved = (want) => until(() => JSON.stringify(planMarks()) === JSON.stringify(want), () => `plan.json 的 captionMarks 要是 ${JSON.stringify(want)}，現在 ${JSON.stringify(planMarks())}`);
+    const select = (sel, a, b) => page.evaluate((s, x, y) => { const i = document.querySelector(s); i.focus(); i.setSelectionRange(x, y); }, sel, a, b);
+    const ctrlB = async () => { await page.keyboard.down('Control'); await page.keyboard.press('b'); await page.keyboard.up('Control'); };
+
+    // 字幕分頁：點第 1 句進改字，選「崩潰」按那一句的「重點」→ 只標那兩個字；那一列有標示，快速試聽那兩個字是 em.cw
+    await page.click('.side-tabs [data-side="cues"]');
+    await page.waitForSelector('#cueList [data-cue="1"] .x', { visible: true });
+    await page.click('#cueList [data-cue="1"] .x');
+    await page.waitForSelector('#cueList .cue-edit');
+    await select('#cueList .cue-edit', 3, 5);
+    await page.click('#cueList [data-cue="1"] [data-mark]');
+    await saved(['#1@崩潰']);
+    assert.equal(await page.$eval('#cueList [data-cue="1"]', (li) => li.classList.contains('emw') && !li.classList.contains('em') && li.querySelector('[data-mark]').getAttribute('aria-pressed')), 'true');
+    assert.equal(await page.evaluate(() => document.activeElement?.matches('.cue-edit')), true, '按「重點」游標留在改字框');
+    await page.waitForFunction(() => document.querySelector('#simCaption em.cw')?.textContent === '崩潰');
+    assert.equal(await page.$eval('#simCaption', (el) => el.classList.contains('cg--em')), false, '整則不換樣式');
+    assert.equal(await page.$eval('#cueMarksOnly', (b) => b.textContent), '重點 1 則');
+    // 游標放在標過的字裡按 Ctrl+B：取消；再選一次按 Ctrl+B：標回來
+    await select('#cueList .cue-edit', 4, 4);
+    await ctrlB();
+    await until(() => planMarks() === undefined, () => `取消後 captionMarks 要拿掉，現在 ${JSON.stringify(planMarks())}`);
+    await select('#cueList .cue-edit', 3, 5);
+    await ctrlB();
+    await saved(['#1@崩潰']);
+    // 離開改字：清單裡那兩個字是主色塊
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => document.querySelector('#cueList [data-cue="1"] .x em.cw')?.textContent === '崩潰');
+
+    // 沒在改字時按 H：整則為準，只標幾個字的拿掉
+    await page.evaluate(() => window.__editor.select({ kind: 'cue', id: 1 }, { lane: 'cap' }));
+    await page.evaluate(() => document.activeElement?.blur());
+    await page.keyboard.press('h');
+    await saved(['#1']);
+    assert.equal(await page.$('#cueList [data-cue="1"] .x em.cw'), null);
+
+    // 屬性面板：第 3 句的「文字」選「收尾」按「重點字幕（H）」→ 只標那兩個字；面板列出標了的字，按 × 取消
+    await page.evaluate(() => window.__editor.select({ kind: 'cue', id: 3 }, { lane: 'cap' }));
+    await page.click('.side-tabs [data-side="insp"]');
+    await page.waitForSelector('#capText');
+    await select('#capText', 3, 5);
+    await page.click('[data-act="capMark"]');
+    await saved(['#1', '#3@收尾']);
+    await page.waitForSelector('[data-act="capWordDel"][data-w="收尾"]');
+    await page.click('[data-act="capWordDel"][data-w="收尾"]');
+    await saved(['#1']);
+    await select('#capText', 3, 5);
+    await ctrlB();
+    await saved(['#1', '#3@收尾']);
+
+    // 合併第 2、3 句：那兩個字跟著併到第 2 句
+    await page.evaluate(() => window.__editor.select({ kind: 'cue', id: 2 }, { lane: 'cap' }));
+    await page.evaluate(() => document.querySelector('[data-act="capMerge"]').click());
+    await saved(['#1', '#2@收尾']);
+    // 復原：回到合併前
+    await page.evaluate(() => document.querySelector('#btnUndo').click());
+    await saved(['#1', '#3@收尾']);
+
+    // 字幕樣式的入口：字幕分頁上面的「字幕樣式」、選到字幕時屬性面板的「字幕樣式…」都跳到整支影片的字幕那一區（打開、看得到樣式按鈕）
+    const styleShown = () => page.waitForFunction(() => {
+      const sub = document.querySelector('#capStyleSub'), r = sub?.getBoundingClientRect();
+      return !window.__editor.selection && sub?.closest('details')?.open && !document.querySelector('#sideInsp').hidden && r && r.height > 0 && r.top >= 0 && r.top < innerHeight && document.querySelectorAll('[data-act="capLook"]').length === 5;
+    });
+    await page.click('.side-tabs [data-side="cues"]');
+    await page.click('#capStyleBtn');
+    await styleShown();
+    await page.evaluate(() => window.__editor.select({ kind: 'cue', id: 2 }, { lane: 'cap' }));
+    await page.click('[data-act="capStyle"]');
+    await styleShown();
+    // 在那裡換樣式：存進 plan.json 的 captionStyle；屬性面板停在原本捲到的地方（不跳回最上面）
+    await page.waitForFunction(() => new Promise((ok) => { const b = document.querySelector('#inspBody'), y = b.scrollTop; setTimeout(() => ok(y > 0 && b.scrollTop === y), 300); }));
+    const y0 = await page.$eval('#inspBody', (b) => b.scrollTop);
+    await page.click('[data-act="capLook"][data-v="outline"]');
+    await until(() => JSON.parse(fs.readFileSync(planFile, 'utf8')).captionStyle?.look === 'outline', '換成白字黑框要存進 plan.json');
+    await page.waitForFunction(() => document.querySelector('[data-act="capLook"][data-v="outline"]')?.getAttribute('aria-pressed') === 'true');
+    assert.equal(await page.$eval('#inspBody', (b) => b.scrollTop), y0, '換字幕樣式後屬性面板不跳回最上面');
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser?.close();
+    await editor.close();
+  }
+});
+
+test('091 講者設定：沒有講者介紹段也找得到（頂端淡的提醒、整支 → 講者的「設定姓名與頭銜」）；存在暫存的 shared/setting.json，存好提醒收起來', { timeout: 120000 }, async (t) => {
+  const root = tmpDir(t, 'editor-speaker-ui-');
+  const project = path.join(root, 'projects/example'), work = path.join(project, 'work');
+  fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'shared'));
+  fs.symlinkSync(TEMPLATE, path.join(root, 'shared/template'), 'junction');
+  // 講者寫在暫存的 shared（ctx.speakerTemplate 的上一層），不動真的 shared/setting.json；14 講者介紹的示範人物要讀得到 scenes
+  const fake = path.join(root, 'fake/shared/template');
+  fs.mkdirSync(fake, { recursive: true });
+  fs.symlinkSync(path.join(TEMPLATE, 'scenes'), path.join(fake, 'scenes'), 'junction');
+  const settingFile = path.join(root, 'fake/shared/setting.json');
+  fs.writeFileSync(path.join(work, 'hyperframes/plan.json'), JSON.stringify({ version: 1, scenes: [{ id: 's01', scene: 'concept', from: '#1', to: '#1e', slots: { text: '第一段' } }] }, null, 2));
+  fs.writeFileSync(path.join(work, 'rough.srt'), '1\n00:00:00,500 --> 00:00:02,500\n第一段字幕\n');
+  const media = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'color=c=navy:size=320x180:rate=30', '-t', '4', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', path.join(work, 'rough.mp4')]);
+  assert.equal(media.status, 0, String(media.stderr));
+  const editor = await startEditor({ cwd: root, flags: { project, template: path.join(root, 'shared/template') }, port: 0, writeState: false, speakerTemplate: fake });
+  let browser;
+  try {
+    browser = await puppeteer.launch({ executablePath: findChrome(), headless: true });
+    const page = await browser.newPage(), errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.setViewport({ width: 1800, height: 1000 });
+    await page.goto(editor.url);
+    await page.waitForFunction(() => window.__editor?.server?.speaker);
+    await page.evaluate(() => { for (const id of ['#coach', '#coachRough']) document.querySelector(id).hidden = true; });
+    // 這一集沒有講者介紹段：頂端是淡的提醒（不是紅的）
+    assert.deepEqual(await page.$eval('#btnSpeakerWarn', (b) => ({ hidden: b.hidden, soft: b.classList.contains('soft') })), { hidden: false, soft: true });
+    // 整支 → 講者：還沒設定、有按鈕；按了跳出對話框（不是「示範人物」的那一版）
+    await page.waitForSelector('[data-act="spkEdit"]');
+    assert.equal(await page.$eval('[data-act="spkEdit"]', (b) => b.textContent), '設定姓名與頭銜');
+    await page.click('[data-act="spkEdit"]');
+    await page.waitForFunction(() => document.querySelector('#dlgSpeaker').open);
+    assert.equal(await page.$eval('#spkTitle', (h) => h.textContent), '講者的姓名與頭銜');
+    await page.type('#spkName', '陳大文');
+    await page.type('#spkTitles', '設計師、講師');
+    await page.click('#spkSave');
+    await page.waitForFunction(() => !document.querySelector('#dlgSpeaker').open);
+    assert.deepEqual(JSON.parse(fs.readFileSync(settingFile, 'utf8')).speaker, { name: '陳大文', titles: ['設計師', '講師'] });
+    await page.waitForFunction(() => document.querySelector('#btnSpeakerWarn').hidden && document.querySelector('[data-act="spkEdit"]')?.textContent === '修改姓名與頭銜');
+    // 再打開：帶著現在的姓名與頭銜
+    await page.click('[data-act="spkEdit"]');
+    await page.waitForFunction(() => document.querySelector('#dlgSpeaker').open);
+    assert.deepEqual(await page.evaluate(() => [document.querySelector('#spkName').value, document.querySelector('#spkTitles').value]), ['陳大文', '設計師、講師']);
+    await page.click('#spkCancel');
     assert.deepEqual(errors, []);
   } finally {
     await browser?.close();

@@ -89,7 +89,7 @@ import { findChrome } from './lib/audit-browser.mjs';
 import { projArg } from './lib/look.mjs';
 import { formatFinding } from './lib/audit-rules.mjs';
 import { appendRound, appendStop, progressFile } from './lib/progress.mjs';
-import { readStopLog } from './status.mjs';
+import { readStopLog, editorUrls } from './status.mjs';
 import { markStoryboardWritten } from './lib/storyboard-state.mjs';
 import { writeAtomic } from './lib/atomic.mjs';
 import { designFileOf, fillFileOf, fillStateOf } from './lib/custom-fill.mjs';
@@ -1396,7 +1396,11 @@ function learnCmd(P, flags) {
     if (flags.json) { console.log(JSON.stringify({ file: rel(r.file), rules: rules.length }, null, 2)); return 0; }
     const by = LEARN.where.map((w) => `${w} ${rules.filter((x) => x.where === w).length}`).join('、');
     console.log(`✓ 選擇頁：${rel(r.file)}（${rules.length} 條：${by}）`);
-    console.log('→ 把這一頁給使用者（平台能發布網頁就發布、給網址；不能就給檔案路徑），請他每條選「照做／不要／再想想」，按最下面「複製答案」貼回來；貼回來再照 references/learn-habits.md 第 4 步做');
+    // 091 剪輯台的 /learn 直接給這一頁：開著就印網址；沒開印怎麼開（開了它也會印「學習清單：」那一行）
+    const u = editorUrls(P.project);
+    if (u?.learn) console.log(`學習清單網址：${u.learn}`);
+    else console.log(`剪輯台沒開：跑 node shared/template/tools/editor.mjs --project ${projectRel(P.root, P.project)}，網址是它印的「學習清單：」那一行`);
+    console.log(`→ 把${u?.learn ? '上面的網址' : '剪輯台的學習清單網址'}給使用者（開不了剪輯台才給檔案路徑），請他每條選「照做／不要／再想想」，按最下面「複製答案」貼回來；貼回來再照 references/learn-habits.md 第 4 步做`);
     return 0;
   }
   const r = writeLearn({ root: P.root, project: P.project });

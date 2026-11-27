@@ -330,7 +330,35 @@ export function writeCover(project, data) {
   fs.renameSync(f + '.tmp', f);
 }
 
-export const candidateTimes = (dur, n = COVER.candidates) => Array.from({ length: n }, (_, i) => Math.round(dur * (0.08 + 0.84 * i / (n - 1)) * 10) / 10);
+export const candidateTimes = (dur, n = COVER.candidates, from = 0) => Array.from({ length: n }, (_, i) => Math.round((from + dur * (0.08 + 0.84 * i / (n - 1))) * 10) / 10);
+// 091 有好幾段講者畫面（主軌是幾段鏡頭，中間夾螢幕錄影或只有聲音）時以第一段為主：建議的幾格、預設那一格都從第一段鏡頭裡挑。
+// work/main.json 的 kind: camera（main.mp4 的秒數）照 work/cuts.v1.json 留下來的片段換成 rough.mp4 的秒數，第一段還留著（≥ 2 秒）的 → [起, 迄]；
+// 第一段整段被剪掉就用下一段。全部都是鏡頭、沒有鏡頭、換不出來（沒有 cuts.v1.json、格式不對）都回 null＝整支照舊
+export function firstCameraSpan(project, video = sourceVideo(project)) {
+  const clips = read(path.join(project, 'work', 'main.json'))?.clips;
+  if (!Array.isArray(clips)) return null;
+  const cams = clips.filter((c) => c?.kind === 'camera' && Number.isFinite(c.start) && Number.isFinite(c.end) && c.end > c.start).sort((a, b) => a.start - b.start);
+  if (!cams.length || cams.length === clips.length) return null;   // 全部都是鏡頭＝一整段講者，不用挑
+  if (video && path.basename(video) === 'main.mp4') { const cam = cams.find((c) => c.end - c.start >= 2); return cam ? [cam.start, cam.end] : null; }
+  const v1 = read(path.join(project, 'work', 'cuts.v1.json'));
+  if (!Array.isArray(v1?.chunks)) return null;
+  const [num, den] = String(v1.timebase || '30/1').split('/').map(Number);
+  const fps = num / (den || 1);
+  if (!(fps > 0)) return null;
+  for (const cam of cams) {
+    let out = 0, a = null, b = null;
+    for (const ch of v1.chunks) {
+      const [s, e, sp] = (Array.isArray(ch) ? ch : []).map(Number);
+      if (!(e > s) || !(sp > 0) || sp >= 99999) continue;   // auto-editor 的 99999＝剪掉
+      const ts = s / fps, te = e / fps, lo = Math.max(ts, cam.start), hi = Math.min(te, cam.end);
+      if (hi > lo) { if (a == null) a = out + (lo - ts) / sp; b = out + (hi - ts) / sp; }
+      out += (te - ts) / sp;
+    }
+    if (a != null && b - a >= 2) return [Math.round(a * 10) / 10, Math.round(b * 10) / 10];
+  }
+  return null;
+}
+export const coverSource = (project) => sourceVideo(project);   // 091 封面台的時間軸播這一支
 const sourceVideo = (project) => [path.join(project, 'work', 'rough.mp4'), path.join(project, 'work', 'main.mp4')].find((f) => fs.existsSync(f)) || null;
 const finalVideo = (project) => [path.join(project, 'output', 'final.mp4'), path.join(project, 'work', 'final-prerender.mp4')].find((f) => fs.existsSync(f)) || null;
 
@@ -349,7 +377,8 @@ function formatOf(project, plan, ar) { return plan.format || (ar < 1 ? 'portrait
 
 // 候選格（給人挑表情）：一格一張小圖，另外拼一張總表。影片沒換就不重抓
 function candidates(project, video, dur) {
-  const dir = coverDir(project), times = candidateTimes(dur), meta = read(path.join(dir, 'candidates.json'));
+  const span = firstCameraSpan(project, video), [from, to] = span ? [span[0], Math.min(span[1], dur)] : [0, dur];   // 091 好幾段講者時從第一段挑
+  const dir = coverDir(project), times = candidateTimes(to - from, COVER.candidates, from), meta = read(path.join(dir, 'candidates.json'));
   const key = `${fs.statSync(video).mtimeMs}:${times.join(',')}`, sheet = path.join(dir, 'candidates.jpg');
   const files = times.map((_, i) => path.join(dir, `cand-${i + 1}.jpg`));
   if (meta?.key !== key || !files.every((f) => fs.existsSync(f))) {
@@ -361,11 +390,20 @@ function candidates(project, video, dur) {
   return { times, files, sheet: fs.existsSync(sheet) ? sheet : null };
 }
 
+// 091 封面台每 2.5 秒問一次狀態：影片沒換（大小、修改時間一樣）就不再跑 ffprobe
+const probeMemo = new Map();
+function probeCached(video) {
+  const st = fs.statSync(video), key = `${st.size}:${st.mtimeMs}`, hit = probeMemo.get(video);
+  if (hit?.key === key) return hit.info;
+  const info = probeMedia(video);
+  probeMemo.set(video, { key, info });
+  return info;
+}
 // 封面台要的狀態：不出圖，只讀現況（候選格沒有才抓）
 export function coverInfo({ project, templateDir = null }) {
   const video = sourceVideo(project);
   if (!video) return { ready: false, message: '這個專案還沒有 work/rough.mp4 → 先「剪乾淨」，再做封面' };
-  const info = probeMedia(video), plan = planOf(project), data = readCover(project);
+  const info = probeCached(video), plan = planOf(project), data = readCover(project);
   fs.mkdirSync(coverDir(project), { recursive: true });
   const cand = candidates(project, video, info.duration);
   const mt = (f) => { try { return fs.statSync(f).mtimeMs; } catch { return null; } };

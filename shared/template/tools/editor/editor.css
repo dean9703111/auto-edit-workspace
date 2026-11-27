@@ -155,6 +155,9 @@ input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--
 /* 038 重點字幕：每一句右邊的開關（沒標時很淡，滑過或選到那一列才有框；標了是實心主色），標了的那一列左邊一條主色 */
 .side-row.cue.em { border-left-color: var(--accent); }
 .side-row.cue.em .x { color: var(--ink); }
+/* 091 只標幾個字：那一列左邊一條細一點的主色虛線、那幾個字是主色塊（和完成影片的 em.cw 同一套顏色） */
+.side-row.cue.emw { border-left-color: var(--accent); border-left-style: dashed; }
+.side-row.cue .x em.cw { font-style: normal; font-weight: 700; background: var(--accent); color: var(--on-accent); border-radius: 3px; padding: 0 2px; }
 .cue-mark { align-self: start; padding: 0 8px; min-height: 22px; font-size: 12px; line-height: 20px; border-radius: 999px; background: transparent; border-color: transparent; color: var(--dim); }
 .side-row.cue:hover .cue-mark, .side-row.cue.sel .cue-mark, .side-row.cue.now .cue-mark { border-color: var(--line2); color: var(--mute); }
 .cue-mark[aria-pressed="true"], .side-row.cue .cue-mark[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
@@ -468,6 +471,7 @@ a.fb-step:hover { background: var(--card); color: var(--ink); }
 .fb-step.waiting .fb-no { color: var(--accent-text); font-weight: 700; }
 .fb-step.done .fb-no { color: var(--good-kw); }
 .fb-sep { color: var(--dim); font-size: 12px; }
+.fb-sep.opt { margin: 0 4px; }   /* 091 封面不是停點：和流程分開一點 */
 .fb-count { display: none; font-size: 12.5px; color: var(--mute); white-space: nowrap; margin-left: 6px; }
 /* 視窗窄：其他步驟只留符號，旁邊寫走到第幾步 */
 @media (max-width: 1320px) { .fb-step:not(.on) .fb-label { display: none; } .fb-count { display: inline; } .next-step { font-size: 12.5px; padding: 3px 8px; } }
@@ -523,6 +527,8 @@ a.fb-step:hover { background: var(--card); color: var(--ink); }
 .notice-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 button.warn-chip { background: color-mix(in srgb, var(--warn) 22%, var(--card)); border-color: var(--warn); color: var(--ink); font-weight: 700; }
 button.warn-chip:hover:not(:disabled) { background: color-mix(in srgb, var(--warn) 36%, var(--card)); }
+/* 091 還沒設定講者、但這一集畫面上不會出現示範人物：淡的提醒 */
+button.warn-chip.soft { background: transparent; border-color: color-mix(in srgb, var(--warn) 60%, var(--line2)); font-weight: 400; }
 .spk-shot { display: block; width: 100%; max-height: 240px; object-fit: contain; margin: 8px 0 12px; border-radius: 6px; background: #000; border: 1px solid var(--line); }
 .find-row { display: grid; grid-template-columns: 60px 1fr; align-items: center; gap: 8px; margin: 8px 0; }
 .find-row input { width: 100%; font-size: 15px; }

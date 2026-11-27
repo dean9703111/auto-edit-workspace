@@ -469,6 +469,11 @@ export class Timeline {
         if (long) { g.fillStyle = '#FFD400'; g.fillRect(xa + 1, y + h - 2, Math.max(2, xb - xa - 2), 2); }
         // 038 重點字幕：上緣一條主色（看得出整支標在哪裡、有沒有擠在一起）
         if (A.isMark?.(c.n)) { g.fillStyle = (C.mark ??= getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#F6630F'); g.fillRect(xa + 1, y, Math.max(2, xb - xa - 2), 3); }
+        // 091 只標幾個字：上緣一條斷開的主色（和整則的分得出來）
+        else if (A.hasWords?.(c.n)) {
+          g.fillStyle = (C.mark ??= getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#F6630F');
+          for (let x = xa + 1; x < xb - 1; x += 8) g.fillRect(x, y, Math.min(4, xb - 1 - x), 3);
+        }
         // 放不下幾個字就不寫（只露一個字看不懂），滑上去有整句
         if (xb - xa > 44) clipRect(xa + 3, y, xb - xa - 6, h, () => {
           g.fillStyle = dead ? 'rgba(255,255,255,0.35)' : sel ? '#fff' : C.mute; g.textBaseline = 'middle';

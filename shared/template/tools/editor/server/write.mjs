@@ -748,17 +748,16 @@ export function applySave(planText, body, ctx = {}) {
     captionStyle = r.style;
     if (captionStyle === null ? !('captionStyle' in plan) : same(captionStyle, plan.captionStyle)) captionStyle = undefined;   // 沒變就不動
   }
-  // 038 重點字幕：頁面送整則的那一份清單（["#6", "#7"]，句號是字幕操作做完之後的；[]／null＝整則的都不標）。不在字幕裡的句號不寫。
+  // 038 重點字幕：頁面送整份清單（["#6", "#7@關鍵詞"]，句號是字幕操作做完之後的；[]／null＝都不標）。不在字幕裡的句號不寫。
   // 沒送時，字幕增刪照樣把原本的標記重新對應（上面 replay 裡的 remapPlan 已經換好，在 planR.captionMarks）
   let marksNext = planR.captionMarks;
   if (body.captionMarks !== undefined) {
     const r = parseCaptionMarks(body.captionMarks);
     errors.push(...r.errors);
     const have = srtIn ? new Set(cues.map((c) => c.n)) : null;
-    // 047 只標幾個字（"#N@詞"）頁面不管：檔案裡原本的（字幕增刪已經在 planR 換好句號）照留，只換整則的那幾個
-    const keep = parseCaptionMarks(planR.captionMarks);
-    const words = [...r.words, ...(keep.errors.length ? [] : keep.words)].filter((w) => !have || have.has(w.n));
-    const list = fmtCaptionMarks(have ? r.marks.filter((n) => have.has(n)) : r.marks, words.filter((w, i) => words.findIndex((x) => x.n === w.n && x.word === w.word) === i));
+    // 047／091 只標幾個字（"#N@詞"）也是頁面送的這一份（091 起剪輯台能選字來標、取消）：整份照頁面的寫，不再保留檔案裡原本的
+    const words = r.words.filter((w) => !have || have.has(w.n));
+    const list = fmtCaptionMarks(have ? r.marks.filter((n) => have.has(n)) : r.marks, words);
     marksNext = list.length ? list : undefined;
   }
   let bed;

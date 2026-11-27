@@ -31,8 +31,8 @@ const HELP = `剪映素材（主軌＋每段一支透明 MOV＋字幕 SRT；要 
   node shared/template/tools/capcut.mjs --project projects/<專案> --cancel      取消背景的剪映素材（連 Chrome 一起收；做好的檔留著）
   node shared/template/tools/capcut.mjs --project projects/<專案> --dry-run     只產生合成和清單，不 render（先看會出幾支、多長）
   node shared/template/tools/capcut.mjs draft --project projects/<專案> [--name <草稿名>] [--force]
-                                                                               素材做好後，直接排成剪映草稿（Mac 剪映專業版）：主軌、每段 .mov、字幕都放在時間軸對的位置，
-                                                                               剪映首頁就看得到（草稿名預設＝專案資料夾名）。剪映要先關掉；同名草稿已存在要加 --force（舊的先整個備份）
+                                                                               素材做好後，直接排成剪映草稿（Mac 剪映專業版；Windows 先找 CapCut 再找剪映）：主軌、每段 .mov、字幕都放在時間軸對的位置，
+                                                                               首頁就看得到（草稿名預設＝專案資料夾名）。那個程式要先關掉；同名草稿已存在要加 --force（舊的先整個備份）
 
 選項：--only s05,s12（只做這幾段，不做主軌）、--no-main（不做主軌）、--force（已經做過、沒變的也重做）、
       --jobs <N>（同時 render 幾支，預設 ${DEFAULT_JOBS}）、--workers <N>（每支幾個 worker，預設自動：加起來不超過只跑一支時）

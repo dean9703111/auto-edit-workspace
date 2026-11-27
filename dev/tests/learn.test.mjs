@@ -25,7 +25,7 @@ const RUN = (cwd, ...a) => spawnSync(process.execPath, [path.join(TOOLS, 'versio
 function workspace(t) {
   const root = tmpDir(t, 'learn-');
   fs.mkdirSync(path.join(root, 'shared'), { recursive: true });
-  fs.symlinkSync(TEMPLATE, path.join(root, 'shared', 'template'), 'dir');
+  fs.symlinkSync(TEMPLATE, path.join(root, 'shared', 'template'), 'junction');   // Windows 不用系統管理員也建得了（其他系統忽略）
   write(root, 'shared/偏好.md', '# 偏好\n\n## 照做\n\n- 金句卡最多 12 個字（r1，2026-11-01）\n\n## 不採用\n\n- 每段都加音效（r2，2026-11-02）\n');
   const p = path.join(root, 'projects', 'ep');
   for (const d of ['camera', 'voice', 'screen', 'images']) fs.mkdirSync(path.join(p, 'assets', d), { recursive: true });
@@ -207,6 +207,7 @@ test('versions.mjs learn：印計數與下一步（--page）；沒有紀錄時 �
   assert.equal(c.status, 0, c.stderr);
   assert.match(c.stdout, /✓ 選擇頁：projects\/ep\/work\/feedback\/learn-choices\.html（1 條：偏好 1、改預設 0、程式檢查 0）/);
   assert.match(c.stdout, /learn-habits\.md 第 4 步/);
+  assert.match(c.stdout, /剪輯台沒開：跑 node shared\/template\/tools\/editor\.mjs --project projects\/ep，網址是它印的「學習清單：」那一行/, '091 剪輯台沒開：印怎麼開');
   const { root: empty } = workspace(t);
   const d = RUN(empty, 'learn', '--project', 'projects/ep');
   assert.equal(d.status, 0, d.stderr);
@@ -232,4 +233,22 @@ test('剪輯台 POST /api/learn：寫 learn.md，回傳要複製的那一行（�
   const P = pathsFrom({ project: p, template: path.join(root, 'shared', 'template') });
   const lines = CLI.finishLines(P, { ...D.newJob(), ok: true, source: 'render', warnings: [], errors: [], qc: { ok: true, errors: 0, warnings: 0, checks: [], format: { width: 1920, height: 1080, fps: 30, hasAudio: true }, duration: { actual: 10 }, sheet: null } }, { size: 1024 });
   assert.ok(lines.includes(`想讓之後的影片更像你，把這行貼給 AI：${L.learnLine('projects/ep')}`), lines.join('\n'));
+});
+
+test('091 剪輯台的 /learn：還沒做選擇頁時說怎麼做；做好後就是那一頁（資料內嵌）', async (t) => {
+  const { root, p } = threeRounds(t);
+  const editor = await startEditor({ flags: { project: p, template: path.join(root, 'shared', 'template') }, cwd: root, port: 0, writeState: false });
+  try {
+    const none = await fetch(new URL('/learn', editor.url));
+    assert.equal(none.status, 404);
+    assert.match(await none.text(), /還沒有學習清單.*整理這集的調整給 AI/);
+    write(p, 'work/feedback/learn-rules.json', JSON.stringify({ rules: [{ id: 'L1', text: '清單只留關鍵詞', where: '偏好', evidence: 'r1、r2' }] }));
+    assert.equal(RUN(root, 'learn', '--project', 'projects/ep', '--page').status, 0);
+    const page = await fetch(new URL('/learn', editor.url));
+    assert.equal(page.status, 200);
+    assert.match(page.headers.get('content-type'), /text\/html/);
+    const html = await page.text();
+    assert.equal(html, read(p, 'work/feedback/learn-choices.html'));
+    assert.match(html, /清單只留關鍵詞/);
+  } finally { await editor.close(); }
 });

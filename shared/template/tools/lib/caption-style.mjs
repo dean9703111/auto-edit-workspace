@@ -21,6 +21,7 @@
 //   fmtCaptionMarks([6, 7])                          → ["#6", "#7"]（寫回 plan.json 的樣子）
 //   resolveCaptionMarks(v, cues, { portrait, … })    → { marks, errors, warnings }：句號不在字幕裡 ⚠ 並略過；連續太多、直式太多、直式一則都沒標 ⚠
 //   describeCaptionMarks([6, 7, 13])                 → 「3 則（#6、#7、#13）」
+//   markWords('隨時會崩潰的系統', ['崩潰'])          → '隨時會<em class="cw">崩潰</em>的系統'（047 只標幾個字；HTML 跳脫過）
 //   fontFiles(style, { bold: true })                 → 有重點字幕時，字體另外有 700 的檔（霞鶩文楷）一起帶
 // 沒有 node 的 import：剪輯台的頁面也直接載這一支（editor.mjs 的 /lib/caption-style.mjs），兩邊同一套數字。
 export const CAP_LOOKS = Object.freeze({
@@ -196,6 +197,21 @@ export const fmtCaptionMarks = (marks, words = []) => [
   ...(marks || []).map((n) => ({ n, text: `#${n}`, k: 0 })),
   ...(words || []).map((w, i) => ({ n: w.n, text: `#${w.n}@${w.word}`, k: 1 + i })),
 ].sort((x, y) => x.n - y.n || x.k - y.k).map((x) => x.text);
+// 047 只標幾個字：text 裡每個 word 第一次出現的地方包成 <em class="cw">（kit/captions.css）；重疊、緊鄰的併成一段、字幕裡找不到的略過。
+// build（lib/captions.mjs）和剪輯台（快速試聽、完成影片預覽、字幕分頁）用同一支
+const escHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+export function markWords(text, words) {
+  const t = String(text ?? '');
+  const ranges = [];
+  for (const w of words || []) { const i = w ? t.indexOf(w) : -1; if (i >= 0) ranges.push([i, i + w.length]); }
+  if (!ranges.length) return escHtml(t);
+  ranges.sort((x, y) => x[0] - y[0]);
+  const merged = [ranges[0].slice()];
+  for (const r of ranges.slice(1)) { const last = merged[merged.length - 1]; if (r[0] <= last[1]) last[1] = Math.max(last[1], r[1]); else merged.push(r.slice()); }
+  let out = '', at = 0;
+  for (const [a, b] of merged) { out += `${escHtml(t.slice(at, a))}<em class="cw">${escHtml(t.slice(a, b))}</em>`; at = b; }
+  return out + escHtml(t.slice(at));
+}
 const markList = (ns, k = 12) => `${ns.slice(0, k).map((n) => `#${n}`).join('、')}${ns.length > k ? '…' : ''}`;
 const wordList = (ws, k = 12) => `${ws.slice(0, k).map((w) => `#${w.n}「${w.word}」`).join('、')}${ws.length > k ? '…' : ''}`;
 export const describeCaptionMarks = (marks, words = []) => [

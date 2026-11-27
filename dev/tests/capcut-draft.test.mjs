@@ -158,3 +158,50 @@ test('素材沒做完、沒有清單.json、草稿名不合法：拒絕並給下
   assert.match(logs.at(-1), /不能有 \/ 或/);
   assert.deepEqual(fs.readdirSync(root), ['root_meta_info.json']);
 });
+
+// 091 Windows 的 CapCut：Mac 格式的草稿放進 CapCut 打開會「專案來自異常路徑」（作者 2026-11-27）
+test('091 draftTarget：Windows 先找 CapCut 再找剪映、版本取安裝資料夾裡最大的；JIANYING_DRAFT_ROOT 照路徑認是哪一個；Mac 照舊', (t) => {
+  const local = tmpDir(t, 'capcut-local-');
+  assert.equal(J.draftTarget({ platform: 'win32', env: { LOCALAPPDATA: local } }), null, '兩個都沒有草稿資料夾');
+  const cc = path.join(local, 'CapCut');
+  fs.mkdirSync(path.join(cc, 'User Data', 'Projects', 'com.lveditor.draft'), { recursive: true });
+  for (const v of ['9.8.1.100', '9.9.0.4254', 'Apps']) fs.mkdirSync(path.join(cc, v));
+  const a = J.draftTarget({ platform: 'win32', env: { LOCALAPPDATA: local } });
+  assert.equal(a.id, 'capcut-win');
+  assert.equal(a.label, 'CapCut');
+  assert.deepEqual(a.files, ['draft_content.json', 'draft_info.json']);
+  assert.equal(a.font, '');
+  assert.deepEqual([a.platform.os, a.platform.app_source, a.platform.app_id, a.platform.app_version], ['windows', 'cc', 359289, '9.9.0']);
+  assert.equal(J.draftTarget({ platform: 'win32', env: { LOCALAPPDATA: local, JIANYING_DRAFT_ROOT: 'D:\\JianyingPro Drafts\\com.lveditor.draft' } }).id, 'jianying-win');
+  assert.equal(J.draftTarget({ platform: 'win32', env: { LOCALAPPDATA: local, JIANYING_DRAFT_ROOT: 'D:/x/CapCut/User Data/Projects/com.lveditor.draft' } }).root, 'D:\\x\\CapCut\\User Data\\Projects\\com.lveditor.draft', '指定的路徑也換成反斜線');
+  const m = J.draftTarget({ platform: 'darwin', env: { JIANYING_DRAFT_ROOT: '/tmp/drafts' } });
+  assert.deepEqual([m.id, m.root, m.files], ['jianying-mac', '/tmp/drafts', ['draft_info.json']]);
+});
+
+test('091 Windows 的 CapCut 草稿：draft_content.json、平台是 CapCut Windows、字幕不帶 Mac 字體；路徑照 CapCut 自己存的寫法', { skip: process.platform !== 'win32' && '路徑是 Windows 的寫法' }, (t) => {
+  const { dir, root, opts, logs } = setup(t);
+  const local = tmpDir(t, 'capcut-local-');
+  fs.mkdirSync(path.join(local, 'CapCut', '9.9.0.4254'), { recursive: true });
+  const target = { ...J.draftTarget({ platform: 'win32', env: { LOCALAPPDATA: local, JIANYING_DRAFT_ROOT: path.join(path.dirname(root), 'CapCut', 'com.lveditor.draft') } }) };
+  fs.mkdirSync(target.root, { recursive: true });
+  fs.copyFileSync(path.join(root, 'root_meta_info.json'), path.join(target.root, 'root_meta_info.json'));
+  assert.equal(J.makeDraft({ ...opts, root: undefined, target }), 0, logs.join('\n'));
+  assert.match(logs.join('\n'), /✓ CapCut草稿：.*\n[\s\S]*→ 打開CapCut，首頁找『ppa-短影片1』/);
+  const dst = path.join(target.root, 'ppa-短影片1');
+  const content = readJson(path.join(dst, 'draft_content.json'));
+  assert.deepEqual(readJson(path.join(dst, 'draft_info.json')), content, 'draft_info.json 是同一份');
+  assert.deepEqual([content.platform.os, content.platform.app_source, content.platform.app_version], ['windows', 'cc', '9.9.0']);
+  assert.deepEqual(content.last_modified_platform, content.platform);
+  assert.ok(content.materials.texts.every((x) => x.font_path === '' && JSON.parse(x.content).styles[0].font.path === ''), '字幕不帶 /Applications/… 的 Mac 字體');
+  const fwd = (p) => p.replace(/\\/g, '/');
+  const meta = readJson(path.join(dst, 'draft_meta_info.json'));
+  assert.equal(meta.draft_root_path, path.win32.resolve(target.root), 'draft_root_path 是反斜線（CapCut 自己存的寫法）');
+  assert.equal(meta.draft_fold_path, `${fwd(target.root)}/ppa-短影片1`, 'draft_fold_path 是正斜線');
+  assert.ok(meta.draft_materials[0].value.every((x) => !x.file_Path.includes('\\') && x.file_Path.startsWith(fwd(dir))), '素材路徑是正斜線');
+  const rm = readJson(path.join(target.root, 'root_meta_info.json'));
+  const e = rm.all_draft_store[0];
+  assert.deepEqual([e.draft_fold_path, e.draft_root_path, e.draft_json_file, e.draft_cover], [`${fwd(target.root)}/ppa-短影片1`, fwd(target.root), `${fwd(target.root)}/ppa-短影片1\\draft_content.json`, `${fwd(target.root)}/ppa-短影片1\\draft_cover.jpg`]);
+  // 同一個草稿再做一次（--force）：照正斜線比對，不會註冊兩筆
+  assert.equal(J.makeDraft({ ...opts, root: undefined, target, force: true }), 0, logs.join('\n'));
+  assert.equal(readJson(path.join(target.root, 'root_meta_info.json')).all_draft_store.filter((x) => x.draft_name === 'ppa-短影片1').length, 1);
+});

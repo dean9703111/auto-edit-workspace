@@ -27,10 +27,61 @@ const FONT = '/Applications/VideoFusion-macOS.app/Contents/Resources/Font/System
 const SUB = { landscape: { size: 7, y: -0.8 }, portrait: { size: 8, y: -0.6 } };
 const STROKE = 0.08;
 
-export const draftRoot = () => process.env.JIANYING_DRAFT_ROOT || (process.platform === 'darwin' ? OFFICIAL_ROOT : null);
+// 091 目標程式：剪映專業版（Mac，原本就有的）、CapCut／剪映（Windows）。每一種的草稿根目錄、平台欄位、字體、主檔名、路徑寫法都不一樣：
+//   Windows 的 CapCut 讀 draft_content.json；draft_meta_info.json 的 draft_root_path 是反斜線、draft_fold_path 是正斜線（照 CapCut 9.9 自己存的草稿），
+//   寫錯就會「專案來自異常路徑」（作者 2026-11-27：Mac 格式的草稿用 JIANYING_DRAFT_ROOT 放進 CapCut，打開就是這個錯）
+const MAC_APP = { id: 'jianying-mac', label: '剪映', quit: '關掉剪映（⌘Q）', platform: null, font: null, files: ['draft_info.json'], win: false, exe: null };
+export function windowsApps(env = process.env) {
+  const local = env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+  const at = (dir) => path.win32.join(local, dir, 'User Data', 'Projects', 'com.lveditor.draft');
+  return [
+    { id: 'capcut-win', label: 'CapCut', install: path.win32.join(local, 'CapCut'), root: at('CapCut'), exe: 'CapCut.exe', app_id: 359289, app_source: 'cc' },
+    { id: 'jianying-win', label: '剪映', install: path.win32.join(local, 'JianyingPro'), root: at('JianyingPro'), exe: 'JianyingPro.exe', app_id: 3704, app_source: 'lv' },
+  ];
+}
+// 安裝資料夾（或它的 Apps）裡版本號最大的那個資料夾（CapCut\9.9.0.4254 → 9.9.0）；找不到回 ''
+export function appVersion(dir) {
+  let names = [];
+  try { names = fs.readdirSync(dir).filter((n) => /^\d+\.\d+\.\d+\.\d+$/.test(n)); } catch { return ''; }
+  const key = (n) => n.split('.').map(Number);
+  names.sort((a, b) => { const x = key(a), y = key(b); for (let i = 0; i < 4; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; });
+  return names.length ? names.at(-1).split('.').slice(0, 3).join('.') : '';
+}
+const winApp = (a, root) => ({
+  id: a.id, label: a.label, quit: `關掉 ${a.label}（右上角的 ×，工作列上也沒有它）`, exe: a.exe, win: true, root: path.win32.resolve(root),
+  font: '', files: ['draft_content.json', 'draft_info.json'],
+  // 版本：CapCut 9.x 裝在 CapCut\Apps\<版本>，也找安裝資料夾本身
+  platform: { app_id: a.app_id, app_source: a.app_source, app_version: appVersion(a.install) || appVersion(path.win32.join(a.install, 'Apps')), device_id: '', hard_disk_id: '', mac_address: '', os: 'windows', os_version: os.release() },
+});
+// 這台電腦的草稿要寫到哪：JIANYING_DRAFT_ROOT 指定就用它（Windows 照路徑認是 CapCut 還是剪映）；不然 Mac 用剪映專業版、Windows 先找 CapCut 再找剪映（有草稿資料夾的那個）
+export function draftTarget({ platform = process.platform, env = process.env } = {}) {
+  const override = env.JIANYING_DRAFT_ROOT;
+  if (platform === 'win32') {
+    const apps = windowsApps(env);
+    if (override) { const norm = (p) => path.win32.resolve(p).toLowerCase(); const a = apps.find((x) => norm(x.root) === norm(override)) || (/jianying/i.test(override) ? apps[1] : apps[0]); return winApp(a, override); }
+    const a = apps.find((x) => fs.existsSync(x.root));
+    return a ? winApp(a, a.root) : null;
+  }
+  const root = override || (platform === 'darwin' ? OFFICIAL_ROOT : null);
+  return root ? { ...MAC_APP, root } : null;
+}
+export const draftRoot = () => draftTarget()?.root ?? null;
 export function jianyingRunning() {
   if (process.platform !== 'darwin') return false;
   return spawnSync('pgrep', ['-f', JY_PROCESS], { stdio: 'ignore' }).status === 0;
+}
+// Windows：tasklist 看主程式開著沒（CapCut.exe／JianyingPro.exe）
+export function appRunning(app) {
+  if (!app?.exe) return jianyingRunning();
+  const r = spawnSync('tasklist', ['/FI', `IMAGENAME eq ${app.exe}`, '/NH'], { encoding: 'utf8', windowsHide: true });
+  return r.status === 0 && String(r.stdout).toLowerCase().includes(app.exe.toLowerCase());
+}
+// 草稿裡寫的路徑：Mac 照原樣；Windows 照 CapCut 自己存的寫法（見上面）
+const fwd = (p) => String(p).replace(/\\/g, '/');
+function draftPaths(app, root, name) {
+  if (!app.win) { const dst = path.join(root, name); return { dst, fold: dst, metaRoot: root, listRoot: root, json: path.join(dst, app.files[0]), cover: path.join(dst, 'draft_cover.jpg') }; }
+  const fold = `${fwd(root)}/${name}`;
+  return { dst: path.win32.join(root, name), fold, metaRoot: path.win32.resolve(root), listRoot: fwd(root), json: `${fold}\\${app.files[0]}`, cover: `${fold}\\draft_cover.jpg` };
 }
 const backupDir = (root) => (path.resolve(root) === OFFICIAL_ROOT ? path.join(os.homedir(), 'Movies', 'JianyingPro', 'backups') : path.join(path.dirname(path.resolve(root)), 'backups'));
 const stamp = (d = new Date()) => { const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
@@ -98,14 +149,14 @@ function segment({ materialId, extras, start, dur, srcDur, renderIndex, trackInd
   };
 }
 
-function subtitleMaterial(text, { size, groupId }) {
-  const content = { styles: [{ fill: { content: { solid: { color: [1, 1, 1] } } }, range: [0, text.length], size, font: { id: '', path: FONT }, strokes: [{ content: { solid: { color: [0, 0, 0] } }, width: STROKE }] }], text };
+function subtitleMaterial(text, { size, groupId, font = FONT }) {
+  const content = { styles: [{ fill: { content: { solid: { color: [1, 1, 1] } } }, range: [0, text.length], size, font: { id: '', path: font }, strokes: [{ content: { solid: { color: [0, 0, 0] } }, width: STROKE }] }], text };
   return {
     add_type: 1, alignment: 1, background_alpha: 1, background_color: '', background_height: 0.14, background_horizontal_offset: 0, background_round_radius: 0, background_style: 0,
     background_vertical_offset: 0, background_width: 0.14, bold_width: 0, border_alpha: 1, border_color: '#000000', border_width: STROKE,
     caption_template_info: { category_id: '', category_name: '', effect_id: '', is_new: false, path: '', request_id: '', resource_id: '', resource_name: '', source_platform: 0 },
     check_flag: 23, combo_info: { text_templates: [] }, content: JSON.stringify(content), fixed_height: -1, fixed_width: -1, font_category_id: '', font_category_name: '', font_id: '',
-    font_name: '', font_path: FONT, font_resource_id: '', font_size: size, font_source_platform: 0, font_team_id: '', font_title: 'none', font_url: '', fonts: [],
+    font_name: '', font_path: font, font_resource_id: '', font_size: size, font_source_platform: 0, font_team_id: '', font_title: 'none', font_url: '', fonts: [],
     force_apply_line_max_width: false, global_alpha: 1, group_id: groupId, has_shadow: false, id: UID(), initial_scale: 1, inner_padding: -1, is_rich_text: false, italic_degree: 0,
     ktv_color: '', language: '', layer_weight: 1, letter_spacing: 0, line_feed: 1, line_max_width: 0.82, line_spacing: 0.02, multi_language_current: 'none', name: '', original_size: [],
     preset_category: '', preset_category_id: '', preset_has_set_alignment: false, preset_id: '', preset_index: 0, preset_name: '', recognize_task_id: '', recognize_type: 0,
@@ -119,14 +170,14 @@ function subtitleMaterial(text, { size, groupId }) {
 const track = (type, flag, segments) => ({ attribute: 0, flag, id: UID(), is_default_name: true, name: '', segments, type });
 
 // main：{ path, durUs, width, height, hasAudio }；overlays：[{ path, startUs, durUs, fileDurUs, width, height, hasAudio }]；cues：[{ start, end, text }]（秒）
-export function buildDraft({ name, width, height, fps = 30, main, overlays = [], cues = [], now = Date.now() }) {
+export function buildDraft({ name, width, height, fps = 30, main, overlays = [], cues = [], now = Date.now(), platform = null, font = null }) {   // platform／font：091 目標程式（null＝剪映 Mac）
   const m = Object.fromEntries(MATERIAL_GROUPS.map((g) => [g, []]));
   const media = [];   // draft_meta_info.json 的素材庫（剪映「媒體」面板）
   const addVideo = (f) => {
     const localId = crypto.randomUUID();
     const mat = videoMaterial({ ...f, durUs: f.fileDurUs ?? f.durUs }, localId);
     m.videos.push(mat);
-    media.push({ create_time: Math.floor(now / 1000), duration: mat.duration, extra_info: mat.material_name, file_Path: f.path, height: f.height, id: localId,
+    media.push({ create_time: Math.floor(now / 1000), duration: mat.duration, extra_info: mat.material_name, file_Path: platform?.os === 'windows' ? fwd(f.path) : f.path, height: f.height, id: localId,
       import_time: Math.floor(now / 1000), import_time_ms: now * 1000, item_source: 1, md5: '', metetype: 'video', roughcut_time_range: { duration: mat.duration, start: 0 },
       sub_time_range: { duration: -1, start: -1 }, type: 0, width: f.width });
     return mat;
@@ -155,7 +206,7 @@ export function buildDraft({ name, width, height, fps = 30, main, overlays = [],
     const start = us(c.start);
     const end = Math.min(us(c.end), total);
     if (!c.text || end <= start) return;
-    const mat = subtitleMaterial(c.text, { size: style.size, groupId });
+    const mat = subtitleMaterial(c.text, { size: style.size, groupId, font: font ?? FONT });
     m.texts.push(mat);
     const anim = { animations: [], id: UID(), multi_language_current: 'none', type: 'sticker_animation' };
     m.material_animations.push(anim);
@@ -172,31 +223,31 @@ export function buildDraft({ name, width, height, fps = 30, main, overlays = [],
       video_mute: false, zoom_info_params: null },
     cover: null, create_time: 0, duration: total, extra_info: null, fps, free_render_index_mode_on: false, group_container: null, id, keyframe_graph_list: [],
     keyframes: { adjusts: [], audios: [], effects: [], filters: [], handwrites: [], stickers: [], texts: [], videos: [] },
-    last_modified_platform: { ...PLATFORM }, materials: m, mutable_config: null, name, new_version: '107.0.0', platform: { ...PLATFORM }, relationships: [],
+    last_modified_platform: { ...(platform || PLATFORM) }, materials: m, mutable_config: null, name, new_version: '107.0.0', platform: { ...(platform || PLATFORM) }, relationships: [],
     render_index_track_mode_on: false, retouch_cover: null, source: 'default', static_cover_image_path: '', time_marks: null, tracks, update_time: 0, version: 360000,
   };
   return { info, media, summary: { lanes: nLanes, overlays: overlays.length, subs: subs.length, total } };
 }
 
-function metaInfo({ info, media, dst, root, name, nowUs }) {
+function metaInfo({ info, media, paths: P, name, nowUs }) {
   return {
     cloud_package_completed_time: '', draft_cloud_capcut_purchase_info: '', draft_cloud_last_action_download: false, draft_cloud_materials: [], draft_cloud_purchase_info: '',
     draft_cloud_template_id: '', draft_cloud_tutorial_info: '', draft_cloud_videocut_purchase_info: '', draft_cover: 'draft_cover.jpg', draft_deeplink_url: '',
-    draft_enterprise_info: { draft_enterprise_extra: '', draft_enterprise_id: '', draft_enterprise_name: '', enterprise_material: [] }, draft_fold_path: dst, draft_id: info.id,
+    draft_enterprise_info: { draft_enterprise_extra: '', draft_enterprise_id: '', draft_enterprise_name: '', enterprise_material: [] }, draft_fold_path: P.fold, draft_id: info.id,
     draft_is_ai_packaging_used: false, draft_is_ai_shorts: false, draft_is_ai_translate: false, draft_is_article_video_draft: false, draft_is_from_deeplink: 'false', draft_is_invisible: false,
     draft_materials: [{ type: 0, value: media }, ...[1, 2, 3, 6, 7].map((type) => ({ type, value: [] }))], draft_materials_copied_info: [], draft_name: name, draft_new_version: '',
-    draft_removable_storage_device: '', draft_root_path: root, draft_segment_extra_info: [], draft_timeline_materials_size_: 0, draft_type: '', tm_draft_cloud_completed: '',
+    draft_removable_storage_device: '', draft_root_path: P.metaRoot, draft_segment_extra_info: [], draft_timeline_materials_size_: 0, draft_type: '', tm_draft_cloud_completed: '',
     tm_draft_cloud_modified: 0, tm_draft_create: nowUs, tm_draft_modified: nowUs, tm_draft_removed: 0, tm_duration: info.duration,
   };
 }
 
 // root_meta_info.json 的一筆（欄位照剪映 11.x 寫的 esim_ep2 那筆）
-function rootEntry({ info, dst, root, name, nowUs }) {
+function rootEntry({ info, paths: P, name, nowUs }) {
   return {
     cloud_draft_cover: false, cloud_draft_sync: false, draft_cloud_last_action_download: false, draft_cloud_purchase_info: '', draft_cloud_template_id: '', draft_cloud_tutorial_info: '',
-    draft_cloud_videocut_purchase_info: '', draft_cover: path.join(dst, 'draft_cover.jpg'), draft_fold_path: dst, draft_id: info.id, draft_is_ai_shorts: false,
+    draft_cloud_videocut_purchase_info: '', draft_cover: P.cover, draft_fold_path: P.fold, draft_id: info.id, draft_is_ai_shorts: false,
     draft_is_cloud_temp_draft: false, draft_is_infinite_canvas_draft: false, draft_is_invisible: false, draft_is_pippit_draft: false, draft_is_web_article_video: false,
-    draft_json_file: path.join(dst, 'draft_info.json'), draft_name: name, draft_new_version: '', draft_root_path: root, draft_timeline_materials_size: 0, draft_type: '',
+    draft_json_file: P.json, draft_name: name, draft_new_version: '', draft_root_path: P.listRoot, draft_timeline_materials_size: 0, draft_type: '',
     draft_web_article_video_enter_from: '', pippit_avatar_url: '', pippit_extra_info: '', pippit_id: '', pippit_user_name: '', streaming_edit_draft_ready: true,
     tm_draft_cloud_completed: '', tm_draft_cloud_entry_id: -1, tm_draft_cloud_modified: 0, tm_draft_cloud_parent_entry_id: -1, tm_draft_cloud_space_id: -1, tm_draft_cloud_user_id: -1,
     tm_draft_create: nowUs, tm_draft_modified: nowUs, tm_draft_removed: 0, tm_duration: info.duration,
@@ -221,11 +272,16 @@ export function ffCover(src, out) {
   return spawnSync('ffmpeg', ['-v', 'error', '-y', '-ss', '1', '-i', src, '-frames:v', '1', '-vf', 'scale=-2:360', out], { stdio: 'ignore' }).status === 0;
 }
 
-const isPlainDraft = (dst) => { try { JSON.parse(fs.readFileSync(path.join(dst, 'draft_info.json'), 'utf8')); return true; } catch { return false; } };
+const isPlainDraft = (dst, app = MAC_APP) => { try { JSON.parse(fs.readFileSync(path.join(dst, app.files[0]), 'utf8')); return true; } catch { return false; } };
 
-export function makeDraft({ dir, name, force = false, root = draftRoot(), running = jianyingRunning, probe = ffprobe, cover = ffCover, log = console.log, cmd = '' }) {
+export function makeDraft({ dir, name, force = false, root = null, target = null, running = null, probe = ffprobe, cover = ffCover, log = console.log, cmd = '' }) {
   const say = (s) => log(s);
-  if (!root) { say('✖ 找不到剪映的草稿資料夾（只支援 Mac 版剪映專業版）→ 設環境變數 JIANYING_DRAFT_ROOT 指到 com.lveditor.draft 資料夾再跑一次'); return 1; }
+  // 091 目標程式：給了 target 就用它；只給 root（測試、舊的呼叫）＝剪映 Mac 的格式；都沒給就看這台電腦（draftTarget）
+  const app = target ?? (root ? { ...MAC_APP, root } : draftTarget());
+  if (!app) { say(process.platform === 'win32' ? '✖ 找不到 CapCut 或剪映的草稿資料夾 → 先打開一次 CapCut（或剪映）、建一個空白草稿再關掉（它會建好草稿資料夾），再跑一次' : '✖ 找不到剪映的草稿資料夾（Mac 版剪映專業版）→ 設環境變數 JIANYING_DRAFT_ROOT 指到 com.lveditor.draft 資料夾再跑一次'); return 1; }
+  root = app.root;
+  const isRunning = running ?? (() => appRunning(app));
+  const L = app.label;
   const bad = checkName(name);
   if (bad) { say(`✖ ${bad} → 用 --name 換一個名字`); return 1; }
   const listFile = path.join(dir, '清單.json');
@@ -243,11 +299,11 @@ export function makeDraft({ dir, name, force = false, root = draftRoot(), runnin
   if (missing.length) { say(`✖ 剪映素材還沒做完，缺 ${missing.length} 個檔：${missing.slice(0, 3).join('、')}${missing.length > 3 ? ' …' : ''} → 先做剪映素材：${cmd}`); return 1; }
 
   // 安全：剪映開著不寫（它關掉時會把記憶體裡的草稿清單寫回去，蓋掉這次的註冊）
-  if (running()) { say('✖ 剪映開著，現在寫草稿會被它蓋掉 → 關掉剪映（⌘Q），再跑同一條指令'); return 1; }
-  const dst = path.join(root, name);
+  if (isRunning()) { say(`✖ ${L}開著，現在寫草稿會被它蓋掉 → ${app.quit}，再跑同一條指令`); return 1; }
+  const P = draftPaths(app, root, name), dst = P.dst;
   if (fs.existsSync(dst)) {
-    if (!force) { say(`✖ 剪映已經有叫「${name}」的草稿 → 要換掉舊的加 --force（舊的會先整個備份），或用 --name 取別的名字`); return 1; }
-    if (!isPlainDraft(dst)) { say(`✖ 「${name}」是剪映存過的草稿（加密），--force 也不換，免得蓋掉你在剪映裡的修改 → 用 --name 取別的名字`); return 1; }
+    if (!force) { say(`✖ ${L}已經有叫「${name}」的草稿 → 要換掉舊的加 --force（舊的會先整個備份），或用 --name 取別的名字`); return 1; }
+    if (!isPlainDraft(dst, app)) { say(`✖ 「${name}」是${L}存過的草稿（加密），--force 也不換，免得蓋掉你在${L}裡的修改 → 用 --name 取別的名字`); return 1; }
   }
 
   // 量素材
@@ -271,7 +327,7 @@ export function makeDraft({ dir, name, force = false, root = draftRoot(), runnin
   const height = Number(list.高) || main.height;
   const now = Date.now();
   const nowUs = now * 1000;
-  const { info, media, summary } = buildDraft({ name, width, height, fps: Number(list.fps) || 30, main, overlays, cues, now });
+  const { info, media, summary } = buildDraft({ name, width, height, fps: Number(list.fps) || 30, main, overlays, cues, now, platform: app.platform, font: app.font });
 
   // 寫檔：舊的先整個備份（--force）→ 新草稿資料夾 → 再確認一次剪映沒開 → 備份並更新 root_meta_info.json
   const bdir = backupDir(root);
@@ -284,8 +340,8 @@ export function makeDraft({ dir, name, force = false, root = draftRoot(), runnin
     say(`✓ 舊草稿備份 → ${bk}`);
   }
   for (const d of ['Resources/audioAlg', 'Resources/videoAlg', 'common_attachment', 'matting', 'smart_crop']) fs.mkdirSync(path.join(dst, d), { recursive: true });
-  fs.writeFileSync(path.join(dst, 'draft_info.json'), JSON.stringify(info));
-  fs.writeFileSync(path.join(dst, 'draft_meta_info.json'), JSON.stringify(metaInfo({ info, media, dst, root, name, nowUs })));
+  for (const f of app.files) fs.writeFileSync(path.join(dst, f), JSON.stringify(info));   // Mac：draft_info.json；Windows：draft_content.json（CapCut 讀這個）＋ draft_info.json
+  fs.writeFileSync(path.join(dst, 'draft_meta_info.json'), JSON.stringify(metaInfo({ info, media, paths: P, name, nowUs })));
   fs.writeFileSync(path.join(dst, 'draft_virtual_store.json'), JSON.stringify({ draft_materials: [], draft_virtual_store: [
     { type: 0, value: [{ creation_time: 0, display_name: '', filter_type: 0, id: '', import_time: 0, import_time_us: 0, sort_sub_type: 0, sort_type: 0 }] },
     { type: 1, value: media.map((x) => ({ child_id: x.id, parent_id: '' })) }, { type: 2, value: [] }] }));
@@ -297,24 +353,25 @@ export function makeDraft({ dir, name, force = false, root = draftRoot(), runnin
   fs.writeFileSync(path.join(dst, 'draft_settings'), `[General]\ndraft_create_time=${sec}\ndraft_last_edit_time=${sec}\nreal_edit_keys=0\nreal_edit_seconds=0\n`);
   cover(main.path, path.join(dst, 'draft_cover.jpg'));
 
-  if (running()) { say(`✖ 剪映在寫草稿的時候被打開了，草稿資料夾寫好了但還沒註冊 → 關掉剪映，加 --force 再跑一次：${cmd}`); return 1; }
+  if (isRunning()) { say(`✖ ${L}在寫草稿的時候被打開了，草稿資料夾寫好了但還沒註冊 → ${app.quit}，加 --force 再跑一次：${cmd}`); return 1; }
   const rp = path.join(root, 'root_meta_info.json');
-  let rootMeta = { all_draft_store: [], draft_ids: 0, root_path: root };
+  let rootMeta = { all_draft_store: [], draft_ids: 0, root_path: P.listRoot };
   if (fs.existsSync(rp)) {
-    try { rootMeta = JSON.parse(fs.readFileSync(rp, 'utf8')); } catch { say(`✖ 讀不懂 ${rp}（剪映的草稿清單），沒有改它；草稿資料夾寫好了 → 回報這一行`); return 1; }
+    try { rootMeta = JSON.parse(fs.readFileSync(rp, 'utf8')); } catch { say(`✖ 讀不懂 ${rp}（${L}的草稿清單），沒有改它；草稿資料夾寫好了 → 回報這一行`); return 1; }
     fs.mkdirSync(bdir, { recursive: true });
     const bk = path.join(bdir, `root_meta_info-${tag}.json`);
     fs.copyFileSync(rp, bk);
     say(`✓ root_meta_info.json 備份 → ${bk}`);
   }
   if (!Array.isArray(rootMeta.all_draft_store)) rootMeta.all_draft_store = [];
-  rootMeta.all_draft_store = rootMeta.all_draft_store.filter((e) => e.draft_fold_path !== dst);
-  rootMeta.all_draft_store.unshift(rootEntry({ info, dst, root, name, nowUs }));
+  const same = (a, b) => (app.win ? fwd(a).toLowerCase() === fwd(b).toLowerCase() : a === b);
+  rootMeta.all_draft_store = rootMeta.all_draft_store.filter((e) => !same(e.draft_fold_path ?? '', P.fold));
+  rootMeta.all_draft_store.unshift(rootEntry({ info, paths: P, name, nowUs }));
   writeAtomic(rp, JSON.stringify(rootMeta));
 
-  say(`✓ 剪映草稿：${dst}（明文，剪映存檔時才會加密）`);
+  say(`✓ ${L}草稿：${dst}（明文，${L}存檔時才會加密）`);
   say(`✓ ${width}×${height}、30fps、長度 ${(summary.total / US).toFixed(2)} 秒：主軌 1 段＋疊加 ${summary.overlays} 支（${summary.lanes} 條軌）＋字幕 ${summary.subs} 則`);
-  for (const w of warns) say(`⚠ ${w} → 打開剪映後看一下那支的尾巴`);
-  say(`→ 打開剪映，首頁找『${name}』`);
+  for (const w of warns) say(`⚠ ${w} → 打開${L}後看一下那支的尾巴`);
+  say(`→ 打開${L}，首頁找『${name}』`);
   return 0;
 }

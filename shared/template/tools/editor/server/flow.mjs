@@ -1,4 +1,4 @@
-// 四頁共用的流程列（/api/flow）：照 work/製作進度.md 的停點紀錄和現有的檔案，告訴頁面每一步走到哪、現在等誰。
+// 四頁共用的流程列（/api/flow；091 起最後多一格「封面」，不是停點）：照 work/製作進度.md 的停點紀錄和現有的檔案，告訴頁面每一步走到哪、現在等誰。
 import fs from 'node:fs';
 import path from 'node:path';
 import { readStopLog } from '../../status.mjs';
@@ -17,10 +17,12 @@ export function flowState(ctx) {
     { id: 'storyboard', no: '③', label: '分鏡表', stop: '③ 分鏡表', url: '/storyboard', ready: exists(path.join(work, 'storyboard.md')) },
     { id: 'final', no: '④', label: '完成影片', stop: '④ 完成影片預覽', url: '/?view=final', ready: exists(P.plan) && exists(path.join(P.out, 'index.html')) },
   ].filter((s) => !s.skip);
+  // 091 封面：不是停點、不算步數（optional），剪乾淨之後就能去；選定了一張（output/cover/cover.jpg）算走過
+  const cover = { id: 'cover', no: '◎', label: '封面', url: '/cover', optional: true, ready: exists(path.join(work, 'rough.mp4')) || exists(path.join(work, 'main.mp4')), state: exists(path.join(P.project, 'output', 'cover', 'cover.jpg')) ? 'done' : 'none', said: null };
   const stateOf = (row) => (!row ? 'none' : ['通過', '略過'].includes(row.state) ? 'done' : 'waiting');
   const out = steps.map(({ stop, skip, ...s }) => ({ ...s, state: stateOf(log.last?.get(stop)), said: log.last?.get(stop)?.state ?? null }));
   const lastRow = log.rows?.at(-1);
   const waiting = lastRow && stateOf(lastRow) === 'waiting' ? steps.find((s) => s.stop === lastRow.stop)?.id ?? null : null;
   // ⑤ 剪輯台不在流程列上，頁面的「下一步」還是要知道現在等的是它
-  return { steps: out, waiting, stop: lastRow && stateOf(lastRow) === 'waiting' ? lastRow.stop : null };
+  return { steps: [...out, cover], waiting, stop: lastRow && stateOf(lastRow) === 'waiting' ? lastRow.stop : null };
 }

@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { COVER, coverInfo, coverProblems, coverPrompt, readCover, writeCover, pickCover, coverOut, coverDir, coverFile } from '../../lib/cover.mjs';
+import { COVER, coverSource, coverInfo, coverProblems, coverPrompt, readCover, writeCover, pickCover, coverOut, coverDir, coverFile } from '../../lib/cover.mjs';
 
 const TOOLS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
@@ -20,6 +20,8 @@ const rel = (ctx, f) => path.relative(ctx.P.root, f).split(path.sep).join('/');
 const requestFile = (ctx) => path.join(coverDir(ctx.P.project), 'request.md');
 const str = (v, max) => String(v ?? '').trim().slice(0, max);
 
+//   coverVideo(ctx)                  → 時間軸播的影片（091）
+export const coverVideo = (ctx) => coverSource(ctx.P.project);
 export function coverState(ctx) {
   const P = ctx.P, name = path.basename(P.project);
   const info = coverInfo({ project: P.project, templateDir: P.templateDir });
@@ -27,6 +29,7 @@ export function coverState(ctx) {
   const req = info.request || {}, rf = requestFile(ctx);
   return {
     ready: true, project: name, format: info.format, at: info.at, pick: info.pick, hasFinal: info.hasFinal,
+    duration: info.duration, video: '/cover/video',   // 091 講者那一格用時間軸挑（播 rough.mp4，沒有就 main.mp4）
     candidates: info.times.map((t, i) => ({ at: t, thumb: `/cover/file/cand-${i + 1}.jpg` })),
     scenes: COVER.scenes.map((id) => ({
       id, name: COVER.names[id], preset: COVER.notes[id], note: req.scenes?.[id]?.note ?? COVER.notes[id], on: req.scenes?.[id]?.on !== false,

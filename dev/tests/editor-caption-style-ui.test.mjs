@@ -18,7 +18,7 @@ test('字幕樣式 UI：五種樣式、字體（沒有的粗細灰掉）、大�
   const project = path.join(root, 'projects/example'), work = path.join(project, 'work');
   fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
   fs.mkdirSync(path.join(root, 'shared'));
-  fs.symlinkSync(TEMPLATE, path.join(root, 'shared/template'), 'dir');
+  fs.symlinkSync(TEMPLATE, path.join(root, 'shared/template'), 'junction');
   // 設定寫在暫存的 shared（ctx.speakerTemplate 的上一層）；已經記了直式的位置，改橫式不能動到它
   const fake = path.join(root, 'fake/shared/template');
   fs.mkdirSync(fake, { recursive: true });

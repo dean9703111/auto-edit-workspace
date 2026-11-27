@@ -22,6 +22,7 @@
 //
 // 檔案：work/.jobs/<name>.json（狀態）、work/.jobs/<name>.log（輸出）、work/.jobs/<name>.starting（開工的鎖，同時多條指令只開一個）。
 // 子行程結束才寫 done／failed；子行程被砍（pid 不在了、狀態還是 running）或 pid 被別的程式重用（當機、重開機後）都算 failed。
+import { hideChildWindows } from './hide-windows.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
@@ -237,6 +238,7 @@ export function runToolUntilDoneSync(file, args = [], { maxWaitSec = TOOL_MAX_WA
 // run：子行程要做的事，回傳 exit code。waitSec＝0：開了就回（不等）
 export async function runJob({ project, name, argv = process.argv.slice(1), run, waitSec = DEFAULT_WAIT, log = console.log, env = {}, again = false, retryFailed = false, cwd, pollMs = 1000, stallMin = STALL_MIN, cancel = '', activity = [], onStart }) {
   if (isJobChild(name)) {
+    hideChildWindows();   // 091 背景工作（Windows）沒有主控台：叫 ffmpeg 等不跳黑色視窗
     let code = 1;
     try { code = (await run()) ?? 0; } catch (e) { console.log(`✖ ${e.message}`); code = 1; }
     const st = jobState(project, name);

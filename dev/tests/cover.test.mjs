@@ -138,7 +138,7 @@ function fakeProject(t, { final = true } = {}) {
   const project = path.join(root, 'projects/demo'), work = path.join(project, 'work');
   fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
   fs.mkdirSync(path.join(root, 'shared'));
-  fs.symlinkSync(TEMPLATE, path.join(root, 'shared/template'), 'dir');
+  fs.symlinkSync(TEMPLATE, path.join(root, 'shared/template'), 'junction');
   fs.writeFileSync(path.join(work, 'hyperframes/plan.json'), JSON.stringify({ version: 1, speakerBox: [600, 100, 1300, 1080], scenes: [] }));
   const mk = (file, color) => assert.equal(spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', `color=c=${color}:size=640x360:rate=10`, '-t', '12', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', file]).status, 0);
   mk(path.join(work, 'rough.mp4'), 'navy');
@@ -189,7 +189,7 @@ test('090 makeCovers：照 cover.json 出圖（三張都是 1920×1080）、內�
   assert.deepEqual([m.width, m.height], [1080, 1920]);
 });
 
-test('090 封面台：挑表情、勾情境複製指令、改字重出、字太長會擋、選定', { skip: noUi }, async (t) => {
+test('090／091 封面台：流程列固定在上面、用時間軸挑表情、勾情境複製指令、改字重出、字太長會擋、選定；輪詢不重畫（不閃）', { skip: noUi }, async (t) => {
   const puppeteer = (await import('puppeteer-core')).default;
   const { startEditor } = await imp('editor.mjs');
   const { findChrome } = await imp('lib/audit-browser.mjs');
@@ -212,17 +212,49 @@ test('090 封面台：挑表情、勾情境複製指令、改字重出、字太�
     await page.setViewport({ width: 1500, height: 1000 });
     await page.evaluateOnNewDocument(() => { Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text) => { window.copied = text; } } }); });
     await page.goto(new URL('/cover', editor.url).href);
-    await page.waitForSelector('.cv-cand');
-    assert.equal((await page.$$('.cv-cand')).length, 8);
+    // 091 講者那一格：一張預覽＋時間軸，建議的幾格是刻度（不再是 8 張照片）
+    await page.waitForSelector('#frameMarks .cv-mark');
+    assert.equal(await page.$('.cv-cand'), null);
+    assert.equal((await page.$$('#frameMarks .cv-mark')).length, 8);
+    assert.equal(await page.$eval('#frameVideo', (v) => new URL(v.src).pathname), '/cover/video');
+    assert.equal((await fetch(new URL('/cover/video', editor.url))).status, 200);
+    // 流程列：和其他頁同一條，這一頁是「封面」，頁首捲動時固定在上面
+    await page.waitForFunction(() => /封面/.test(document.querySelector('#flowbar .fb-step.on')?.textContent || ''));
+    assert.equal(await page.$eval('header.topbar', (h) => getComputedStyle(h).position), 'sticky');
     assert.equal(await page.$eval('#projName', (el) => el.textContent), 'demo・橫式 1920×1080');
     assert.deepEqual(await page.$$eval('.cv-scene label', (els) => els.map((el) => el.textContent)), ['去背＋內容', '情境模擬', '大塊圖示']);
     assert.equal(await page.$eval('.cv-scene[data-scene="mock"] textarea', (el) => el.value), CV.COVER.notes.mock, '描述預設是內建的那一段');
     assert.match(await page.$eval('.cv-card[data-scene="cutout"] .cv-empty', (el) => el.textContent), /還沒有這一張/);
-    // 挑表情：寫進 cover.json
-    await page.click('.cv-cand:nth-child(5)');
-    await page.waitForFunction(() => document.querySelector('.cv-cand:nth-child(5)').getAttribute('aria-pressed') === 'true');
+    // 挑表情：點建議的刻度（或拖時間軸）只換預覽，按「用這一格」才寫進 cover.json
+    await page.click('#frameMarks .cv-mark:nth-child(5)');
+    assert.equal(await page.$eval('#frameAt', (r) => Number(r.value)), CV.candidateTimes(12)[4]);
+    assert.notEqual(CV.readCover(P.project).at, CV.candidateTimes(12)[4], '還沒按「用這一格」不寫');
+    await page.click('#frameUse');
+    await page.waitForFunction(() => document.querySelector('#frameMarks .cv-mark:nth-child(5)').classList.contains('used') && document.querySelector('#frameUse').disabled);
+    assert.equal(CV.readCover(P.project).at, CV.candidateTimes(12)[4]);
+    // 拖的時候不閃：畫面畫在 canvas 上，一次只跳一格（連續拖 30 下不會排 30 次跳格），停下來畫的是最後那一秒
+    await page.waitForFunction(() => document.querySelector('#frameCanvas').width > 0);
+    const drag = await page.evaluate(async () => {
+      const v = document.querySelector('#frameVideo'), r = document.querySelector('#frameAt');
+      let seeks = 0;
+      v.addEventListener('seeking', () => { seeks++; });
+      for (let i = 0; i < 30; i++) { r.value = String(1 + i * 0.3); r.dispatchEvent(new Event('input', { bubbles: true })); await new Promise((ok) => setTimeout(ok, 5)); }
+      for (let i = 0; i < 100 && document.querySelector('#frameCanvas').dataset.at !== '9.7'; i++) await new Promise((ok) => setTimeout(ok, 50));
+      return { seeks, at: document.querySelector('#frameCanvas').dataset.at };
+    });
+    assert.equal(drag.at, '9.7', '停下來畫的是最後那一秒');
+    assert.ok(drag.seeks < 30, `跳格要合併，拖 30 下跳了 ${drag.seeks} 次`);
+    // 時間軸拖到不是建議的秒數也可以
+    await page.$eval('#frameAt', (r) => { r.value = '7.3'; r.dispatchEvent(new Event('input', { bubbles: true })); });
+    assert.equal(await page.$eval('#frameTime', (el) => el.textContent), '7.3 秒');
+    await page.click('#frameUse');
+    await page.waitForFunction(() => document.querySelector('#frameBadge').classList.contains('used'));
     const at = CV.readCover(P.project).at;
-    assert.equal(at, CV.candidateTimes(12)[4]);
+    assert.equal(at, 7.3);
+    // 輪詢（每 2.5 秒）不重畫沒變的東西：預覽、刻度、三張封面的圖都不會重建（原本每次重建 8 張照片，畫面一直閃）
+    await page.evaluate(() => { window.__added = 0; new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1 && (n.matches('img, video, .cv-mark') || n.querySelector('img, video, .cv-mark'))) window.__added++; }).observe(document.body, { childList: true, subtree: true }); });
+    await new Promise((r) => setTimeout(r, 5500));
+    assert.equal(await page.evaluate(() => window.__added), 0, '輪詢時沒有重建圖');
     // 取消一個情境、改描述、複製
     await page.click('#on-icon');
     await page.$eval('.cv-scene[data-scene="cutout"] textarea', (el) => { el.value = '講者站前面，後面放剪輯台的畫面'; });
@@ -257,12 +289,37 @@ test('090 封面台：挑表情、勾情境複製指令、改字重出、字太�
     assert.equal((await fetch(new URL('/cover/file/cover.jpg', editor.url))).status, 200);
     assert.equal((await fetch(new URL('/cover/file/..%2Fcover.json', editor.url))).status, 404, '只供應封面的圖');
     assert.deepEqual(errors, []);
-    // 剪輯台頂列的按鈕
+    // 剪輯台頂列的按鈕：在同一頁換到封面台（091，不另開網頁）
     await page.goto(editor.url);
     await page.waitForSelector('#btnCover');
     assert.equal(await page.$eval('#btnCover', (el) => el.textContent), '做封面');
+    await page.evaluate(() => { document.querySelector('#coach').hidden = true; document.querySelector('#coachRough').hidden = true; });
+    await Promise.all([page.waitForNavigation(), page.evaluate(() => document.querySelector('#btnCover').click())]);
+    assert.equal(new URL(page.url()).pathname, '/cover');
+    assert.equal((await browser.pages()).length, 2, '沒有另開分頁（about:blank＋這一頁）');
   } finally {
     await browser?.close();
     await editor.close();
   }
+});
+
+test('091 好幾段講者畫面以第一段為主：建議的幾格、預設那一格都在第一段鏡頭裡（main.json 的鏡頭照 cuts.v1.json 換成 rough.mp4 的秒數）', { skip: noUi }, (t) => {
+  const P = fakeProject(t, { final: false });
+  const main = (clips) => fs.writeFileSync(path.join(P.work, 'main.json'), JSON.stringify({ clips }));
+  // 只有一段鏡頭：整支照舊
+  main([{ file: 'assets/camera/a.mp4', kind: 'camera', start: 0, end: 13 }]);
+  assert.equal(CV.firstCameraSpan(P.project), null);
+  // 鏡頭 0–5、螢幕錄影 5–8、鏡頭 8–13；初剪剪掉 main.mp4 的第 0–1 秒 → 第一段鏡頭是 rough.mp4 的 0–4 秒
+  main([{ file: 'assets/camera/a.mp4', kind: 'camera', start: 0, end: 5 }, { file: 'assets/screen/s.mp4', kind: 'screen', start: 5, end: 8 }, { file: 'assets/camera/b.mp4', kind: 'camera', start: 8, end: 13 }]);
+  assert.equal(CV.firstCameraSpan(P.project), null, '沒有 cuts.v1.json 換不出來：照舊');
+  fs.writeFileSync(path.join(P.work, 'cuts.v1.json'), JSON.stringify({ version: '1', timebase: '30/1', chunks: [[0, 30, 99999], [30, 390, 1]] }));
+  assert.deepEqual(CV.firstCameraSpan(P.project), [0, 4]);
+  const info = CV.coverInfo({ project: P.project });
+  assert.deepEqual(info.times, CV.candidateTimes(4, CV.COVER.candidates, 0));
+  assert.ok(info.times.every((x) => x >= 0 && x <= 4), `建議的幾格要在 0–4 秒：${info.times}`);
+  assert.equal(info.at, info.times[2], '預設那一格也在第一段');
+  // 第一段鏡頭整段被剪掉：從下一段開始算（main 8–13 → rough 7–12）
+  fs.writeFileSync(path.join(P.work, 'cuts.v1.json'), JSON.stringify({ version: '1', timebase: '30/1', chunks: [[0, 150, 99999], [150, 390, 1]] }));
+  main([{ file: 'assets/camera/a.mp4', kind: 'camera', start: 0, end: 5 }, { file: 'assets/screen/s.mp4', kind: 'screen', start: 5, end: 8 }, { file: 'assets/camera/b.mp4', kind: 'camera', start: 8, end: 13 }]);
+  assert.deepEqual(CV.firstCameraSpan(P.project), [3, 8], '第一段整段剪掉：用下一段（螢幕錄影 5–8 → rough 0–3，鏡頭 8–13 → rough 3–8）');
 });

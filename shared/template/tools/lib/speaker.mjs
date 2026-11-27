@@ -61,12 +61,15 @@ export function applySpeaker(scenes, sp) {
 }
 
 // 這份 plan 輸出後，畫面上會不會是示範人物：段落沒寫 name 且還沒設定講者，或 name 直接寫了示範人物而講者資料沒設定
+// plan.json 裡用 14 講者介紹的段（不管有沒有寫姓名）；剪輯台用來決定存好講者之後要不要更新預覽
+function speakerSegs(scenes, plan) { return (Array.isArray(plan?.scenes) ? plan.scenes : []).filter((s) => s && s.scene != null && findScene(scenes, s.scene)?.key === 'speaker'); }
+const loadOr = (templateDir) => { try { return loadScenes(templateDir); } catch { return []; } };   // 模板讀不到：當成沒有講者段，由 build 報錯
+export const speakerSegments = (templateDir, plan) => speakerSegs(loadOr(templateDir), plan).map((s) => s.id);
 export function speakerGate(templateDir, plan, sp = readSpeaker(templateDir)) {
-  let scenes = [];
-  try { scenes = loadScenes(templateDir); } catch { /* 模板讀不到：當成沒有講者段，由 build 報錯 */ }
+  const scenes = loadOr(templateDir);
   const def = scenes.find((s) => s.key === 'speaker');
   const demo = def?.slots?.name?.default ?? null;
-  const segs = (Array.isArray(plan?.scenes) ? plan.scenes : []).filter((s) => s && s.scene != null && findScene(scenes, s.scene)?.key === 'speaker');
+  const segs = speakerSegs(scenes, plan);
   const shown = segs.filter((s) => {
     const name = typeof s.slots?.name === 'string' ? s.slots.name.trim() : '';
     return name ? name === demo && sp.state !== 'set' : sp.state === 'unset';

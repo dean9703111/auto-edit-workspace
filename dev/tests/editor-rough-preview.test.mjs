@@ -28,7 +28,7 @@ before(async () => {
   work = path.join(project, 'work');
   fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
   fs.mkdirSync(path.join(root, 'shared'));
-  fs.symlinkSync(TEMPLATE, path.join(root, 'shared', 'template'), 'dir');
+  fs.symlinkSync(TEMPLATE, path.join(root, 'shared', 'template'), 'junction');
   fs.writeFileSync(planFile(), '{\n  "version": 1\n}\n');
   fs.writeFileSync(srtFile(), srt);
   // 前 8 秒有畫面，後面全黑（只有聲音）
