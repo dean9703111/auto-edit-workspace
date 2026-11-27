@@ -3,6 +3,9 @@ projects/*
 !projects/example/
 projects/example/work/
 projects/example/output/
+!projects/example-portrait/
+projects/example-portrait/work/
+projects/example-portrait/output/
 # 工作區設定（講者的姓名與頭銜、子代理一次最多派幾個…都在這一個檔）：每個人本機各一份，範本是 shared/setting.example.json
 shared/setting.json
 # 舊版的講者資料（現在在 setting.json 的 speaker；舊檔還在的話照樣讀得到）
